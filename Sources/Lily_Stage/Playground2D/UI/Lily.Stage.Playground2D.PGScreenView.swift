@@ -38,7 +38,11 @@ extension Lily.Stage.Playground2D
         {
             self.device = device
             
+            #if FOR_PLAYGROUND
             self.environment = .string
+            #else
+            self.environment = .metallib
+            #endif
             self.particleCapacity = particleCapacity
             self.textures = textures
             
