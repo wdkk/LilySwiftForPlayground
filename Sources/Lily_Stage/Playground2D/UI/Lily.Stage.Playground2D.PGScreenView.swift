@@ -39,8 +39,10 @@ extension Lily.Stage.Playground2D
             self.device = device
             
             #if FOR_PLAYGROUND
+            print( "for playground" )
             self.environment = .string
             #else
+            print( "for xcode" )
             self.environment = .metallib
             #endif
             self.particleCapacity = particleCapacity
