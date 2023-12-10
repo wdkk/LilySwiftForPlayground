@@ -25,8 +25,7 @@ let package = Package(
             dependencies: [],
             path: "./Sources/",
             swiftSettings: [
-                .define( "DEBUG", .when( platforms:[.iOS, .macOS, .macCatalyst, .visionOS], configuration:.debug ) ),
-                .define( "FOR_PLAYGROUND" )
+                .define( "DEBUG", .when( platforms:[.iOS, .macOS, .macCatalyst, .visionOS], configuration:.debug ) )
             ]
         )
     ]
