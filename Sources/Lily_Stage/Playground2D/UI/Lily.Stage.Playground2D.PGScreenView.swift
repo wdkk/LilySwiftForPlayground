@@ -30,7 +30,7 @@ extension Lily.Stage.Playground2D
         
         public init( 
             device:MTLDevice,
-            particleCapacity:Int = 20000,
+            particleCapacity:Int = 10000,
             textures:[String] = ["lily", "mask-sparkle", "mask-snow", "mask-smoke", "mask-star"],
             design:(( PGScreen )->Void)? = nil,
             update:(( PGScreen )->Void)? = nil 
@@ -39,10 +39,8 @@ extension Lily.Stage.Playground2D
             self.device = device
             
             #if FOR_PLAYGROUND
-            print( "for playground" )
             self.environment = .string
             #else
-            print( "for xcode" )
             self.environment = .metallib
             #endif
             self.particleCapacity = particleCapacity
