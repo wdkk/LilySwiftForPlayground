@@ -18,7 +18,7 @@ import SwiftUI
 
 extension Lily.Stage.Playground2D
 {
-    #if FOR_PLAYGROUND
+    #if os(iOS) || os(visionOS)
     public struct PGScreenView : UIViewControllerRepresentable
     {
         var device:MTLDevice
@@ -30,64 +30,19 @@ extension Lily.Stage.Playground2D
         
         public init( 
             device:MTLDevice,
-            environment:Lily.Stage.ShaderEnvironment = .string,
-            particleCapacity:Int = 10000,
+            particleCapacity:Int = 20000,
             textures:[String] = ["lily", "mask-sparkle", "mask-snow", "mask-smoke", "mask-star"],
             design:(( PGScreen )->Void)? = nil,
             update:(( PGScreen )->Void)? = nil 
         )
         {
             self.device = device
-
-            self.environment = .string  // string固定
-            self.particleCapacity = particleCapacity
-            self.textures = textures
             
-            self.design = design
-            self.update = update
-        }
-        
-        public func makeUIViewController( context:Context ) -> PGScreen {
-            let screen = PGScreen(
-                device:device,
-                environment:self.environment,
-                particleCapacity:self.particleCapacity,
-                textures:self.textures 
-            )
-            
-            screen.buildupHandler = self.design
-            screen.loopHandler = self.update
-            
-            return screen
-        }
-        
-        public func updateUIViewController( _ uiViewController:PGScreen, context:Context ) {
-            uiViewController.rebuild()
-        }
-    }
-    
-    #elseif os(iOS) || os(visionOS)
-    public struct PGScreenView : UIViewControllerRepresentable
-    {
-        var device:MTLDevice
-        var environment:Lily.Stage.ShaderEnvironment
-        var particleCapacity:Int
-        var textures:[String]
-        public var design:(( PGScreen )->Void)?
-        public var update:(( PGScreen )->Void)?
-        
-        public init( 
-            device:MTLDevice,
-            environment:Lily.Stage.ShaderEnvironment = .metallib,
-            particleCapacity:Int = 10000,
-            textures:[String] = ["lily", "mask-sparkle", "mask-snow", "mask-smoke", "mask-star"],
-            design:(( PGScreen )->Void)? = nil,
-            update:(( PGScreen )->Void)? = nil 
-        )
-        {
-            self.device = device
-
-            self.environment = environment
+            #if FOR_PLAYGROUND
+            self.environment = .string
+            #else
+            self.environment = .metallib
+            #endif
             self.particleCapacity = particleCapacity
             self.textures = textures
             
@@ -126,7 +81,6 @@ extension Lily.Stage.Playground2D
         
         public init( 
             device:MTLDevice,
-            environment:Lily.Stage.ShaderEnvironment = .metallib,
             particleCapacity:Int = 10000,
             textures:[String] = ["lily", "mask-sparkle", "mask-snow", "mask-smoke", "mask-star"],
             design:(( PGScreen )->Void)? = nil,
