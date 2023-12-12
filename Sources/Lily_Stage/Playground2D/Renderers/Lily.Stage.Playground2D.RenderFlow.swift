@@ -35,9 +35,9 @@ extension Lily.Stage.Playground2D
         public init(
             device:MTLDevice,
             viewCount:Int,
-            environment:Lily.Stage.ShaderEnvironment,
-            particleCapacity:Int,
-            textures:[String]
+            environment:Lily.Stage.ShaderEnvironment = .metallib,
+            particleCapacity:Int = 10000,
+            textures:[String] = []
         ) 
         {
             self.pass = .init( device:device )
@@ -83,7 +83,7 @@ extension Lily.Stage.Playground2D
         
         public override func render(
             commandBuffer:MTLCommandBuffer,
-            rasterizationRateMap:MTLRasterizationRateMap?,
+            rasterizationRateMap:Lily.Metal.RasterizationRateMap?,
             viewports:[MTLViewport],
             viewCount:Int,
             destinationTexture:MTLTexture?,

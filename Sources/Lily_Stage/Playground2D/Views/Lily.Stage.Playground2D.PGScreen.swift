@@ -8,6 +8,8 @@
 //   https://opensource.org/licenses/mit-license.php
 //
 
+/// コメント未済
+
 import Metal
 
 #if os(iOS) || os(visionOS)
@@ -35,19 +37,19 @@ extension Lily.Stage.Playground2D
         public var touches:[PGTouch] { return touchManager.touches }
         public var releases:[PGTouch] { return touchManager.releases }
         
-        public var coordMinX:Double { -(metalView.width * 0.5) }
-        public var coordMaxX:Double { metalView.width * 0.5 }
-        public var coordMinY:Double { -(metalView.height * 0.5) }
-        public var coordMaxY:Double { metalView.height * 0.5 }
+        public var minX:Double { -(metalView.width * 0.5) }
+        public var maxX:Double { metalView.width * 0.5 }
+        public var minY:Double { -(metalView.height * 0.5) }
+        public var maxY:Double { metalView.height * 0.5 }
         
         public var screenSize:LLSizeFloat { LLSizeFloat( width, height ) }
         
         public var coordRegion:LLRegion { 
             return LLRegion(
-                left:coordMinX,
-                top:coordMaxY,
-                right:coordMaxX,
-                bottom:coordMinY 
+                left:minX,
+                top:maxY,
+                right:maxX,
+                bottom:minY 
             )
         }
         
@@ -196,7 +198,7 @@ extension Lily.Stage.Playground2D
         public init( 
             device:MTLDevice, 
             environment:Lily.Stage.ShaderEnvironment = .metallib,
-            particleCapacity:Int = 20000,
+            particleCapacity:Int = 10000,
             textures:[String] = ["lily", "mask-sparkle", "mask-snow", "mask-smoke", "mask-star"]
         )
         {
@@ -225,7 +227,12 @@ extension Lily.Stage.Playground2D
                 textures:self.textures
             )
             
-            renderEngine = .init( device:device, size:CGSize( 320, 240 ), renderFlow:renderFlow! )
+            renderEngine = .init( 
+                device:device,
+                size:CGSize( 320, 240 ), 
+                renderFlow:renderFlow!,
+                buffersInFlight:1
+            )
 
             // 時間の初期化
             PGActor.ActorTimer.shared.start()
@@ -247,7 +254,6 @@ extension Lily.Stage.Playground2D
 #if os(iOS) || os(visionOS)
 extension Lily.Stage.Playground2D.PGScreen
 {
-    public typealias Here = Lily.Stage.Playground2D
     public func recogizeTouches( touches allTouches:[UITouch] ) {
         // タッチ情報の配列をリセット
         self.touchManager.clear()
@@ -256,14 +262,14 @@ extension Lily.Stage.Playground2D.PGScreen
         var idx = 0
         for touch in allTouches {
             // point座標系を取得
-            let lt_pos = touch.location( in: self.view )
+            let lt_pos = touch.location( in:self.view )
             
             // MetalViewの中心座標を取得
             let o = metalView.center
             
             let pix_o_pos = LLPointFloat( lt_pos.x - o.x, -(lt_pos.y - o.y) )
             let pix_lt_pos = LLPointFloat( lt_pos.x, lt_pos.y )
-            var state:Here.PGTouch.State = .release
+            var state:Lily.Stage.Playground2D.PGTouch.State = .release
             
             switch touch.phase {
                 case .began: state = .began
@@ -274,7 +280,7 @@ extension Lily.Stage.Playground2D.PGScreen
                 default: state = .release
             }
             
-            let pg_touch = Here.PGTouch(
+            let pg_touch = Lily.Stage.Playground2D.PGTouch(
                 xy: pix_o_pos,  // 中心を0とした座標
                 uv: pix_lt_pos, // 左上を0とした座標
                 state: state    // タッチ状態
@@ -294,8 +300,7 @@ extension Lily.Stage.Playground2D.PGScreen
 #if os(macOS)
 extension Lily.Stage.Playground2D.PGScreen
 {
-    public typealias Here = Lily.Stage.Playground2D
-    public func recogizeMouse( pos:LLPoint, phase:Here.MacOSMousePhase, event:NSEvent? ) {
+    public func recogizeMouse( pos:LLPoint, phase:Lily.Stage.Playground2D.MacOSMousePhase, event:NSEvent? ) {
         // タッチ情報の配列をリセット
         self.touchManager.clear()
         
@@ -304,7 +309,7 @@ extension Lily.Stage.Playground2D.PGScreen
             
         let pix_o_pos  = LLPointFloat( pos.x.cgf - o.x, -(pos.y.cgf - o.y) )
         let pix_lt_pos = LLPointFloat( pos.x, pos.y )
-        var state:Here.PGTouch.State = .release
+        var state:Lily.Stage.Playground2D.PGTouch.State = .release
         
         switch phase {
             case .began: state = .began
@@ -314,7 +319,7 @@ extension Lily.Stage.Playground2D.PGScreen
             case .cancelled: state = .release
         }
  
-        let pg_touch = Here.PGTouch(
+        let pg_touch = Lily.Stage.Playground2D.PGTouch(
             xy: pix_o_pos,  // 中心を0とした座標
             uv: pix_lt_pos, // 左上を0とした座標
             state: state    // タッチ状態
