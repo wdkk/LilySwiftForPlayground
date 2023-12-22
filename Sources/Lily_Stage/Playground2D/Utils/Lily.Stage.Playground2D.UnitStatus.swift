@@ -32,6 +32,10 @@ extension Lily.Stage.Playground2D
             1.0,    // life
             0.0     // deltaLife
         )
+        public var zIndex:LLFloat = 0.0
+        private var _reserved:LLFloat = 0.0
+        private var _reserved2:LLFloat = 0.0
+        private var _reserved3:LLFloat = 0.0
         fileprivate var states:LLFloatv2 = LLFloatv2(
             1.0,                       // enabled: 1.0 = true, 0.0 = false
             LifeState.trush.rawValue   // state: .active or .trush    
@@ -64,6 +68,10 @@ extension Lily.Stage.Playground2D
             angle: 0.0,
             deltaAngle: 0.0,
             lifes: .init( 1.0, 0.0 ), 
+            zIndex: 0.0,
+            _reserved: 0.0,
+            _reserved2: 0.0,
+            _reserved3: 0.0,
             states: .init( 1.0, 0.0 ), 
             types: ( 0, 0 ) 
         )
