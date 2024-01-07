@@ -11,9 +11,9 @@
 import Metal
 import simd
 
-extension Lily.Stage.Playground2D
+extension Lily.Stage.Playground3D
 {
-    open class SubRenderer
+    open class AlphaRenderer
     {
         public var device: MTLDevice
         
@@ -21,27 +21,27 @@ extension Lily.Stage.Playground2D
         
         public init( device:MTLDevice, environment:Lily.Stage.ShaderEnvironment, viewCount:Int ) {
             self.device = device
-           
+            
             let desc = MTLRenderPipelineDescriptor()
-            desc.label = "Playground 2D Geometry(SubBlend)"
+            desc.label = "Playground 3D Geometry(AlphaBlend)"
             
             if environment == .metallib {
                 let library = try! Lily.Stage.metalLibrary( of:device )
-                desc.vertexShader( .init( device:device, mtllib:library, shaderName:"Lily_Stage_Playground2D_Vs" ) )
-                desc.fragmentShader( .init( device:device, mtllib:library, shaderName:"Lily_Stage_Playground2D_Fs" ) )
+                desc.vertexShader( .init( device:device, mtllib:library, shaderName:"Lily_Stage_Playground3D_Vs" ) )
+                desc.fragmentShader( .init( device:device, mtllib:library, shaderName:"Lily_Stage_Playground3D_Fs" ) )
             }
+            /*
             else if environment == .string {
-                let stringShader = Lily.Stage.Playground2D.ShaderString.shared( device:device )
-                desc.vertexShader( stringShader.playground2DVertexShader )
-                desc.fragmentShader( stringShader.playground2DFragmentShader )            
+                let stringShader = Lily.Stage.Playground3D.ShaderString.shared( device:device )
+                desc.vertexShader( stringShader.playground3DVertexShader )
+                desc.fragmentShader( stringShader.playground3DFragmentShader )            
             }
-
+            */
+            
             desc.rasterSampleCount = Lily.Stage.BufferFormats.sampleCount
             
-            desc.colorAttachments[0].pixelFormat = Lily.Stage.BufferFormats.linearSRGBBuffer
-            desc.colorAttachments[0].composite( type:.sub )
-            desc.colorAttachments[1].pixelFormat = Lily.Stage.BufferFormats.backBuffer
-            desc.colorAttachments[1].composite( type:.sub )
+            desc.colorAttachments[0].pixelFormat = Lily.Stage.BufferFormats.backBuffer
+            desc.colorAttachments[0].composite( type:.alphaBlend )
             desc.depthAttachmentPixelFormat = Lily.Stage.BufferFormats.depth
             if #available( macCatalyst 13.4, * ) {
                 desc.maxVertexAmplificationCount = viewCount
@@ -53,8 +53,8 @@ extension Lily.Stage.Playground2D
         public func draw( 
             with renderEncoder:MTLRenderCommandEncoder?,
             globalUniforms:Lily.Metal.RingBuffer<Lily.Stage.Shared.GlobalUniformArray>?,
-            mediumTextures:Lily.Stage.Playground2D.MediumTexture,
-            storage:Lily.Stage.Playground2D.Storage,
+            renderTextures:Lily.Stage.RenderTextures,
+            storage:Lily.Stage.Playground3D.Storage,
             screenSize:CGSize
         ) 
         {
@@ -64,7 +64,8 @@ extension Lily.Stage.Playground2D
             // シェーダの合成タイプの設定も行う
             var local_uniform = LocalUniform( 
                 projectionMatrix:.pixelXYProjection( screenSize ),
-                shaderCompositeType:.sub
+                shaderCompositeType:.alpha,
+                drawingType:.quadrangles
             )
             
             renderEncoder?.setVertexBuffer( storage.particles?.metalBuffer, offset:0, index:0 )
@@ -83,8 +84,8 @@ extension Lily.Stage.Playground2D
         public func drawTriangle( 
             with renderEncoder:MTLRenderCommandEncoder?,
             globalUniforms:Lily.Metal.RingBuffer<Lily.Stage.Shared.GlobalUniformArray>?,
-            mediumTextures:Lily.Stage.Playground2D.MediumTexture,
-            storage:Lily.Stage.Playground2D.Storage,
+            renderTextures:Lily.Stage.RenderTextures,
+            storage:Lily.Stage.Playground3D.Storage,
             screenSize:CGSize
         ) 
         {
@@ -94,7 +95,7 @@ extension Lily.Stage.Playground2D
             // シェーダの合成タイプの設定も行う
             var local_uniform = LocalUniform( 
                 projectionMatrix:.pixelXYProjection( screenSize ),
-                shaderCompositeType:.sub,
+                shaderCompositeType:.alpha,
                 drawingType:.triangles
             )
             

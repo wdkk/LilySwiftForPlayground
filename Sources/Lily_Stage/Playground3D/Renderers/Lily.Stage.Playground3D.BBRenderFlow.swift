@@ -11,33 +11,32 @@
 import Metal
 import MetalKit
 
-extension Lily.Stage.Playground2D
+extension Lily.Stage.Playground3D
 {
-    open class RenderFlow
+    open class BBRenderFlow
     : Lily.Stage.BaseRenderFlow
     {
-        var pass:Lily.Stage.Playground2D.Pass?
-        var mediumTextures:Lily.Stage.Playground2D.MediumTexture
+        var pass:Lily.Stage.Playground3D.BBPass?
         
-        public private(set) var pool:PGPool
-        public private(set) var storage:Storage
+        weak var mediumTextures:BBMediumRenderTextures?
+        weak var renderTextures:Lily.Stage.RenderTextures?
         
-        var alphaRenderer:AlphaRenderer?
-        var addRenderer:AddRenderer?
-        var subRenderer:SubRenderer?
+        public private(set) var pool:BBPool
+        public private(set) var storage:BBStorage
         
-        var sRGBRenderer:SRGBRenderer?
-        
+        var alphaRenderer:BBAlphaRenderer?
+        var addRenderer:BBAddRenderer?
+        var subRenderer:BBSubRenderer?
+          
         public let viewCount:Int
         
-        public var clearColor:LLColor = .white
-        
-        public private(set) var screenSize:CGSize = .zero
         public private(set) var particleCapacity:Int
         
         public init(
             device:MTLDevice,
             viewCount:Int,
+            BBMediumTextures:BBMediumRenderTextures,
+            renderTextures:Lily.Stage.RenderTextures,
             environment:Lily.Stage.ShaderEnvironment = .metallib,
             particleCapacity:Int = 10000,
             textures:[String] = []
@@ -47,7 +46,9 @@ extension Lily.Stage.Playground2D
             self.viewCount = viewCount
             self.particleCapacity = particleCapacity
             
-            self.mediumTextures = .init( device:device )
+            self.mediumTextures = BBMediumTextures
+            
+            self.renderTextures = renderTextures
             
             // レンダラーの作成
             self.alphaRenderer = .init( 
@@ -66,32 +67,22 @@ extension Lily.Stage.Playground2D
                 viewCount:viewCount
             )
             
-            self.sRGBRenderer = .init( 
-                device:device,
-                environment:environment,
-                viewCount:viewCount
-            )
-            
             self.storage = .init( 
                 device:device, 
                 capacity:particleCapacity
             )
             self.storage.addTextures( textures )
             
-            self.pool = PGPool()
+            self.pool = BBPool()
             self.pool.storage = self.storage
         
             super.init( device:device )
             
-            PGPool.current = pool
+            BBPool.current = pool
         }
         
         public override func changeSize( scaledSize:CGSize ) {
-            screenSize = scaledSize
-            screenSize.width /= LLSystem.retinaScale
-            screenSize.height /= LLSystem.retinaScale
-            
-            mediumTextures.updateBuffers( size:scaledSize, viewCount:viewCount )
+            mediumTextures?.updateBuffers( size:scaledSize, viewCount:self.viewCount )
         }
         
         public override func render(
@@ -105,8 +96,13 @@ extension Lily.Stage.Playground2D
         )
         {
             guard let pass = self.pass else { return }
-        
-            PGPool.current?.storage?.statuses?.update { acc, _ in
+            
+            guard let renderTextures = self.renderTextures else { 
+                LLLog( "renderTexturesが設定されていません" )
+                return
+            }
+            
+            BBPool.current?.storage?.statuses?.update { acc, _ in
                 for i in 0 ..< acc.count {
                     if acc[i].enabled == false || acc[i].state == .trush { continue }
                     acc[i].position += acc[i].deltaPosition
@@ -119,7 +115,8 @@ extension Lily.Stage.Playground2D
             
             // 共通処理
             pass.updatePass( 
-                mediumTextures:mediumTextures,
+                mediumTextures:mediumTextures!,
+                renderTextures:renderTextures,
                 rasterizationRateMap:rasterizationRateMap,
                 renderTargetCount:viewCount        
             )
@@ -127,73 +124,60 @@ extension Lily.Stage.Playground2D
             // フォワードレンダリング : パーティクルの描画の設定
             pass.setDestination( texture:destinationTexture )
             pass.setDepth( texture:depthTexture )
-            pass.setClearColor( self.clearColor )
             
             let encoder = commandBuffer.makeRenderCommandEncoder( descriptor:pass.passDesc! )
             
             encoder?
-            .label( "Playground 2D Render" )
+            .label( "Playground 3D Render" )
             .cullMode( .none )
             .frontFacing( .counterClockwise )
             .depthStencilState( pass.depthState! )
             .viewports( viewports )
             .vertexAmplification( count:viewCount, viewports:viewports )
             
-            // Playground2Dレンダー描画
+            // Playground3Dレンダー描画
             alphaRenderer?.draw(
                 with:encoder,
                 globalUniforms:uniforms,
-                mediumTextures:mediumTextures,
-                storage:storage,
-                screenSize:screenSize
+                renderTextures:renderTextures,
+                storage:storage
             )
             
             alphaRenderer?.drawTriangle(
                 with:encoder,
                 globalUniforms:uniforms,
-                mediumTextures:mediumTextures,
-                storage:storage,
-                screenSize:screenSize
+                renderTextures:renderTextures,
+                storage:storage
             )
             
             addRenderer?.draw(
                 with:encoder,
                 globalUniforms:uniforms,
-                mediumTextures:mediumTextures,
-                storage:storage,
-                screenSize:screenSize
+                renderTextures:renderTextures,
+                storage:storage
             )
             
             addRenderer?.drawTriangle(
                 with:encoder,
                 globalUniforms:uniforms,
-                mediumTextures:mediumTextures,
-                storage:storage,
-                screenSize:screenSize
+                renderTextures:renderTextures,
+                storage:storage
             )
             
             subRenderer?.draw(
                 with:encoder,
                 globalUniforms:uniforms,
-                mediumTextures:mediumTextures,
-                storage:storage,
-                screenSize:screenSize
+                renderTextures:renderTextures,
+                storage:storage
             )
-            
+
             subRenderer?.drawTriangle(
                 with:encoder,
                 globalUniforms:uniforms,
-                mediumTextures:mediumTextures,
-                storage:storage,
-                screenSize:screenSize
+                renderTextures:renderTextures,
+                storage:storage
             )
-            
-            // sRGB変換
-            sRGBRenderer?.draw(
-                with:encoder,
-                mediumTextures:mediumTextures
-            )
-            
+
             encoder?.endEncoding()
         }
     }

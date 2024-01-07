@@ -12,17 +12,17 @@ import Metal
 import MetalKit
 import simd
 
-extension Lily.Stage
+extension Lily.Stage.Playground3D
 {
-    open class ParticlePass
+    open class Pass
     { 
         var device:MTLDevice
         var commandQueue:MTLCommandQueue?
         
         public var passDesc:MTLRenderPassDescriptor?
-        public var depthState:MTLDepthStencilState?
+        public var depthState: MTLDepthStencilState?
         
-        public init( device:MTLDevice, renderTextures:RenderTextures ) {
+        public init( device:MTLDevice ) {
             self.device = device
             // パーティクルのレンダーパスの準備
             passDesc = .make {
@@ -41,7 +41,7 @@ extension Lily.Stage
         }
         
         public func updatePass(
-            renderTextures:RenderTextures,
+            renderTextures:Lily.Stage.RenderTextures,
             rasterizationRateMap:Lily.Metal.RasterizationRateMap?,
             renderTargetCount:Int
         )

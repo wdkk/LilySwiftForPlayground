@@ -11,26 +11,24 @@
 import Metal
 import MetalKit
 
-extension Lily.Stage.Playground2D
+extension Lily.Stage.Playground3D
 {
     open class RenderFlow
     : Lily.Stage.BaseRenderFlow
     {
-        var pass:Lily.Stage.Playground2D.Pass?
-        var mediumTextures:Lily.Stage.Playground2D.MediumTexture
+        var pass:Lily.Stage.Playground3D.Pass?
+        weak var renderTextures:Lily.Stage.RenderTextures?
         
         public private(set) var pool:PGPool
         public private(set) var storage:Storage
         
         var alphaRenderer:AlphaRenderer?
-        var addRenderer:AddRenderer?
-        var subRenderer:SubRenderer?
+        //var addRenderer:AddRenderer?
+        //var subRenderer:SubRenderer?
         
-        var sRGBRenderer:SRGBRenderer?
+        //var sRGBRenderer:SRGBRenderer?
         
         public let viewCount:Int
-        
-        public var clearColor:LLColor = .white
         
         public private(set) var screenSize:CGSize = .zero
         public private(set) var particleCapacity:Int
@@ -38,6 +36,7 @@ extension Lily.Stage.Playground2D
         public init(
             device:MTLDevice,
             viewCount:Int,
+            renderTextures:Lily.Stage.RenderTextures,
             environment:Lily.Stage.ShaderEnvironment = .metallib,
             particleCapacity:Int = 10000,
             textures:[String] = []
@@ -47,7 +46,7 @@ extension Lily.Stage.Playground2D
             self.viewCount = viewCount
             self.particleCapacity = particleCapacity
             
-            self.mediumTextures = .init( device:device )
+            self.renderTextures = renderTextures
             
             // レンダラーの作成
             self.alphaRenderer = .init( 
@@ -55,6 +54,7 @@ extension Lily.Stage.Playground2D
                 environment:environment,
                 viewCount:viewCount
             )
+            /*
             self.addRenderer = .init( 
                 device:device,
                 environment:environment,
@@ -71,6 +71,7 @@ extension Lily.Stage.Playground2D
                 environment:environment,
                 viewCount:viewCount
             )
+            */
             
             self.storage = .init( 
                 device:device, 
@@ -91,7 +92,7 @@ extension Lily.Stage.Playground2D
             screenSize.width /= LLSystem.retinaScale
             screenSize.height /= LLSystem.retinaScale
             
-            mediumTextures.updateBuffers( size:scaledSize, viewCount:viewCount )
+            //renderTextures.updateBuffers( size:scaledSize, viewCount:viewCount )
         }
         
         public override func render(
@@ -119,7 +120,7 @@ extension Lily.Stage.Playground2D
             
             // 共通処理
             pass.updatePass( 
-                mediumTextures:mediumTextures,
+                renderTextures:renderTextures!,
                 rasterizationRateMap:rasterizationRateMap,
                 renderTargetCount:viewCount        
             )
@@ -127,23 +128,22 @@ extension Lily.Stage.Playground2D
             // フォワードレンダリング : パーティクルの描画の設定
             pass.setDestination( texture:destinationTexture )
             pass.setDepth( texture:depthTexture )
-            pass.setClearColor( self.clearColor )
             
             let encoder = commandBuffer.makeRenderCommandEncoder( descriptor:pass.passDesc! )
             
             encoder?
-            .label( "Playground 2D Render" )
+            .label( "Playground 3D Render" )
             .cullMode( .none )
             .frontFacing( .counterClockwise )
             .depthStencilState( pass.depthState! )
             .viewports( viewports )
             .vertexAmplification( count:viewCount, viewports:viewports )
             
-            // Playground2Dレンダー描画
+            // Playground3Dレンダー描画
             alphaRenderer?.draw(
                 with:encoder,
                 globalUniforms:uniforms,
-                mediumTextures:mediumTextures,
+                renderTextures:renderTextures!,
                 storage:storage,
                 screenSize:screenSize
             )
@@ -151,15 +151,16 @@ extension Lily.Stage.Playground2D
             alphaRenderer?.drawTriangle(
                 with:encoder,
                 globalUniforms:uniforms,
-                mediumTextures:mediumTextures,
+                renderTextures:renderTextures!,
                 storage:storage,
                 screenSize:screenSize
             )
             
+            /*
             addRenderer?.draw(
                 with:encoder,
                 globalUniforms:uniforms,
-                mediumTextures:mediumTextures,
+                renderTextures:renderTextures,
                 storage:storage,
                 screenSize:screenSize
             )
@@ -167,7 +168,7 @@ extension Lily.Stage.Playground2D
             addRenderer?.drawTriangle(
                 with:encoder,
                 globalUniforms:uniforms,
-                mediumTextures:mediumTextures,
+                renderTextures:renderTextures,
                 storage:storage,
                 screenSize:screenSize
             )
@@ -175,7 +176,7 @@ extension Lily.Stage.Playground2D
             subRenderer?.draw(
                 with:encoder,
                 globalUniforms:uniforms,
-                mediumTextures:mediumTextures,
+                renderTextures:renderTextures,
                 storage:storage,
                 screenSize:screenSize
             )
@@ -183,7 +184,7 @@ extension Lily.Stage.Playground2D
             subRenderer?.drawTriangle(
                 with:encoder,
                 globalUniforms:uniforms,
-                mediumTextures:mediumTextures,
+                renderTextures:renderTextures,
                 storage:storage,
                 screenSize:screenSize
             )
@@ -191,8 +192,9 @@ extension Lily.Stage.Playground2D
             // sRGB変換
             sRGBRenderer?.draw(
                 with:encoder,
-                mediumTextures:mediumTextures
+                renderTextures:renderTextures
             )
+            */
             
             encoder?.endEncoding()
         }

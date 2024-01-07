@@ -39,7 +39,7 @@ extension Lily.Stage.Playground2D
 
             desc.rasterSampleCount = Lily.Stage.BufferFormats.sampleCount
             
-            desc.colorAttachments[0].pixelFormat = Lily.Stage.BufferFormats.particleBuffer
+            desc.colorAttachments[0].pixelFormat = Lily.Stage.BufferFormats.linearSRGBBuffer
             desc.colorAttachments[0].composite( type:.add )
             desc.colorAttachments[1].pixelFormat = Lily.Stage.BufferFormats.backBuffer
             desc.colorAttachments[1].composite( type:.add )
@@ -54,7 +54,7 @@ extension Lily.Stage.Playground2D
         public func draw( 
             with renderEncoder:MTLRenderCommandEncoder?,
             globalUniforms:Lily.Metal.RingBuffer<Lily.Stage.Shared.GlobalUniformArray>?,
-            renderTextures:Lily.Stage.Playground2D.RenderTextures,
+            mediumTextures:Lily.Stage.Playground2D.MediumTexture,
             storage:Lily.Stage.Playground2D.Storage,
             screenSize:CGSize
         ) 
@@ -84,7 +84,7 @@ extension Lily.Stage.Playground2D
         public func drawTriangle( 
             with renderEncoder:MTLRenderCommandEncoder?,
             globalUniforms:Lily.Metal.RingBuffer<Lily.Stage.Shared.GlobalUniformArray>?,
-            renderTextures:Lily.Stage.Playground2D.RenderTextures,
+            mediumTextures:Lily.Stage.Playground2D.MediumTexture,
             storage:Lily.Stage.Playground2D.Storage,
             screenSize:CGSize
         ) 
