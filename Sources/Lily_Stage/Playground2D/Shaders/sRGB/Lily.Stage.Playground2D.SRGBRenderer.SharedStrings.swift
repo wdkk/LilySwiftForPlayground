@@ -11,8 +11,7 @@
 import Metal
 import simd
 
-// TODO: Playground2Dと同等なので独立した共通SRGBレンダラにしたらいいかもしれない
-extension Lily.Stage.Playground3D
+extension Lily.Stage.Playground2D
 {   
     open class SRGBShaderString
     {
@@ -37,7 +36,7 @@ extension Lily.Stage.Playground3D
         """ }
         
         static var sRGBVertexShaderCode:String { """
-        vertex SRGBVOut Lily_Stage_Playground3D_SRGB_Vs( uint vid [[vertex_id]] )
+        vertex SRGBVOut Lily_Stage_Playground2D_SRGB_Vs( uint vid [[vertex_id]] )
         {
             const float2 vertices[] = {
                 float2(-1, -1),
@@ -52,7 +51,7 @@ extension Lily.Stage.Playground3D
         """ }
         
         static var sRGBFragmentShaderCode:String { """
-        fragment SRGBFOut Lily_Stage_Playground3D_SRGB_Fs(
+        fragment SRGBFOut Lily_Stage_Playground2D_SRGB_Fs(
             SRGBVOut         in            [[ stage_in ]],
             texture2d<float> resultTexture [[ texture(0) ]]
         )
@@ -84,13 +83,13 @@ extension Lily.Stage.Playground3D
             self.sRGBVertexShader = .init(
                 device:device, 
                 code: Self.importsCode + Self.definesCode + Self.sRGBVertexShaderCode,
-                shaderName:"Lily_Stage_Playground3D_SRGB_Vs" 
+                shaderName:"Lily_Stage_Playground2D_SRGB_Vs" 
             )
             
             self.sRGBFragmentShader = .init(
                 device:device,
                 code: Self.importsCode + Self.definesCode + Self.sRGBFragmentShaderCode,
-                shaderName:"Lily_Stage_Playground3D_SRGB_Fs" 
+                shaderName:"Lily_Stage_Playground2D_SRGB_Fs" 
             )
         }
     }
