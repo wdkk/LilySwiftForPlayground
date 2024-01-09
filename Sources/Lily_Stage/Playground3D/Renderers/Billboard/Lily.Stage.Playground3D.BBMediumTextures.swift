@@ -12,13 +12,14 @@ import Metal
 import MetalKit
 import simd
 
-extension Lily.Stage.Playground2D
+extension Lily.Stage.Playground3D
 {    
-    open class MediumTextures
+    open class BBMediumRenderTextures
     { 
         var device:MTLDevice
+        var commandQueue:MTLCommandQueue?
         
-        var particleTexture: MTLTexture?
+        var billboardTexture: MTLTexture?
 
         public init( device:MTLDevice ) {
             self.device = device
@@ -26,9 +27,9 @@ extension Lily.Stage.Playground2D
         
         @discardableResult
         public func updateBuffers( size:CGSize, viewCount:Int ) -> Bool {
-            if particleTexture != nil && 
-               particleTexture!.width.d == size.width && 
-               particleTexture!.height.d == size.height 
+            if billboardTexture != nil && 
+               billboardTexture!.width.d == size.width && 
+               billboardTexture!.height.d == size.height 
             { return false }
             
             // テクスチャ再生成の作業
@@ -40,15 +41,6 @@ extension Lily.Stage.Playground2D
             )
             
             tex_desc.sampleCount = Lily.Stage.BufferFormats.sampleCount
-            // NOTE: メモリレスを使う例をコメントアウト
-            /*
-            #if !targetEnvironment(simulator)
-            if #available( macCatalyst 14.0, * ) { tex_desc.storageMode = .memoryless }
-            else { tex_desc.storageMode = .private }
-            #else
-            tex_desc.storageMode = .private
-            #endif
-            */
             tex_desc.storageMode = .private
             
             if viewCount > 1 {
@@ -59,8 +51,8 @@ extension Lily.Stage.Playground2D
             
             // particleTextureの再生成
             tex_desc.pixelFormat = Lily.Stage.BufferFormats.linearSRGBBuffer
-            particleTexture = device.makeTexture( descriptor:tex_desc )
-            particleTexture?.label = "Particle Texture"
+            billboardTexture = device.makeTexture( descriptor:tex_desc )
+            billboardTexture?.label = "Billboard Texture"
             
             return true
         }
