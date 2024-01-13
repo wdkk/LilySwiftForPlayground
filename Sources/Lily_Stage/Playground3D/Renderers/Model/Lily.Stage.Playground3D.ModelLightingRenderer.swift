@@ -58,7 +58,7 @@ extension Lily.Stage.Playground3D
             desc.colorAttachments[IDX_GBUFFER_1].pixelFormat = Lily.Stage.BufferFormats.GBuffer1
             desc.colorAttachments[IDX_GBUFFER_2].pixelFormat = Lily.Stage.BufferFormats.GBuffer2
             desc.colorAttachments[IDX_GBUFFER_DEPTH].pixelFormat = Lily.Stage.BufferFormats.GBufferDepth
-            desc.colorAttachments[IDX_OUTPUT].pixelFormat = Lily.Stage.BufferFormats.backBuffer
+            desc.colorAttachments[IDX_OUTPUT].pixelFormat = Lily.Stage.BufferFormats.linearSRGBBuffer
             desc.depthAttachmentPixelFormat = Lily.Stage.BufferFormats.depth
             if #available( macCatalyst 13.4, * ) {
                 desc.maxVertexAmplificationCount = viewCount
@@ -75,18 +75,18 @@ extension Lily.Stage.Playground3D
         
         public func draw( with renderEncoder:MTLRenderCommandEncoder?, 
                    globalUniforms:Lily.Metal.RingBuffer<Lily.Stage.Shared.GlobalUniformArray>?,
-                   renderTextures:ModelRenderTextures
+                   renderTextures:ModelRenderTextures?
         )
         {
             guard let lighting_pp = pipeline else { return }
             // ライティング描画
             renderEncoder?.setRenderPipelineState( lighting_pp )
             renderEncoder?.setDepthStencilState( depthState )
-            renderEncoder?.setFragmentMemoryLessTexture( renderTextures.GBuffer0, index:IDX_GBUFFER_0 )
-            renderEncoder?.setFragmentMemoryLessTexture( renderTextures.GBuffer1, index:IDX_GBUFFER_1 )
-            renderEncoder?.setFragmentMemoryLessTexture( renderTextures.GBuffer2, index:IDX_GBUFFER_2 )
-            renderEncoder?.setFragmentMemoryLessTexture( renderTextures.GBufferDepth, index:IDX_GBUFFER_DEPTH )
-            renderEncoder?.setFragmentTexture( renderTextures.shadowMap, index:5 )
+            renderEncoder?.setFragmentMemoryLessTexture( renderTextures?.GBuffer0, index:IDX_GBUFFER_0 )
+            renderEncoder?.setFragmentMemoryLessTexture( renderTextures?.GBuffer1, index:IDX_GBUFFER_1 )
+            renderEncoder?.setFragmentMemoryLessTexture( renderTextures?.GBuffer2, index:IDX_GBUFFER_2 )
+            renderEncoder?.setFragmentMemoryLessTexture( renderTextures?.GBufferDepth, index:IDX_GBUFFER_DEPTH )
+            renderEncoder?.setFragmentTexture( renderTextures?.shadowMap, index:5 )
             renderEncoder?.setFragmentTexture( skyCubeMap, index:6 )
             renderEncoder?.setFragmentBuffer( globalUniforms?.metalBuffer, offset:0, index:0 )
             renderEncoder?.drawPrimitives( type:.triangle, vertexStart:0, vertexCount:3 )
@@ -101,7 +101,7 @@ extension Lily.Stage.Playground3D
 
             // Mipsを活用するためにKTXフォーマットを使う
             skyCubeMap = try! Lily.Metal.Texture.create( device:device, assetName:"skyCubeMap" )!
-                .makeTextureView( pixelFormat:.rgba8Unorm_srgb )
+                .makeTextureView( pixelFormat:.rgba8Unorm )
         }
     }
 }

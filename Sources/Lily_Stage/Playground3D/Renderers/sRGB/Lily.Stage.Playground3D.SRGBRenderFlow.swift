@@ -17,9 +17,8 @@ extension Lily.Stage.Playground3D
     : Lily.Stage.BaseRenderFlow
     {
         var pass:Lily.Stage.Playground3D.SRGBPass?
-        
-        weak var BBMediumTextures:BBMediumRenderTextures?
-        weak var renderTextures:ModelRenderTextures?
+
+        weak var mediumTexture:MediumTexture?
         
         var sRGBRenderer:SRGBRenderer?
         
@@ -28,16 +27,14 @@ extension Lily.Stage.Playground3D
         public init(
             device:MTLDevice,
             viewCount:Int,
-            BBMediumTextures:BBMediumRenderTextures,
-            renderTextures:ModelRenderTextures,
+            mediumTexture:MediumTexture,
             environment:Lily.Stage.ShaderEnvironment
         ) 
         {
             self.pass = .init( device:device )
             self.viewCount = viewCount
 
-            self.BBMediumTextures = BBMediumTextures
-            self.renderTextures = renderTextures
+            self.mediumTexture = mediumTexture
             
             self.sRGBRenderer = .init( 
                 device:device,
@@ -84,7 +81,7 @@ extension Lily.Stage.Playground3D
             // sRGB変換
             sRGBRenderer?.draw(
                 with:encoder,
-                mediumTextures:BBMediumTextures!
+                mediumTexture:self.mediumTexture
             )
 
             encoder?.endEncoding()

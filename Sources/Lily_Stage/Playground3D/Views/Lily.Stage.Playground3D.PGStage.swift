@@ -26,11 +26,11 @@ extension Lily.Stage.Playground3D
         var device:MTLDevice
         var renderEngine:Lily.Stage.StandardRenderEngine?
         
-        var BBMediumTextures:BBMediumRenderTextures
         var modelRenderTextures:ModelRenderTextures
+        var mediumTexture:MediumTexture
         
         var modelRenderFlow:ModelRenderFlow
-        var BBRenderFlow:BBRenderFlow
+        var bbRenderFlow:BBRenderFlow
         var sRGBRenderFlow:SRGBRenderFlow
         
         public var clearColor:LLColor = .white
@@ -42,37 +42,42 @@ extension Lily.Stage.Playground3D
         public var screenSize:LLSizeFloat { LLSizeFloat( width, height ) }
     
         // MARK: - パーティクル情報
-        public var shapes:Set<BBActor> { BBRenderFlow.pool.shapes }
+        public var shapes:Set<BBActor> { bbRenderFlow.pool.shapes }
         
-        // 外部処理ハンドラ
-        public var buildupHandler:(( PGStage )->Void)?
-        public var loopHandler:(( PGStage )->Void)?
+        // MARK: - 外部処理ハンドラ
+        public var pgDesignHandler:(( PGStage )->Void)?
+        public var pgUpdateHandler:(( PGStage )->Void)?
+        private var _design_once_flag = false
         
         #if os(iOS) || os(visionOS)
         public lazy var metalView = Lily.View.MetalView( device:device )
         .setup( caller:self ) { me, vc in
             me.bgColor( .grey )
             me.isMultipleTouchEnabled = true
+            vc._design_once_flag = false
         }
         .buildup( caller:self ) { me, vc in
-            vc.removeAllShapes()
-            
             CATransaction.stop {
                 me.rect( vc.rect )
                 vc.renderEngine?.changeScreenSize( size:me.scaledBounds.size )
                 vc.modelRenderTextures.updateBuffers( size:me.scaledBounds.size, viewCount:1 )
-                vc.BBMediumTextures.updateBuffers( size:me.scaledBounds.size, viewCount:1 )
+                vc.mediumTexture.updateBuffers( size:me.scaledBounds.size, viewCount:1 )
             }
             
-            vc.buildupHandler?( self )
+            if !vc._design_once_flag {
+                vc.removeAllShapes()
+                vc.pgDesignHandler?( self )
+                vc.bbRenderFlow.pool.storage?.statuses?.commit()
+                vc._design_once_flag = true
+            }
         }
         .draw( caller:self ) { me, vc, status in
             // 時間の更新
             BBActor.ActorTimer.shared.update()
             // ハンドラのコール
-            vc.loopHandler?( self )
+            vc.pgUpdateHandler?( self )
             // 変更の確定
-            vc.BBRenderFlow.pool.storage?.statuses?.commit()
+            vc.bbRenderFlow.pool.storage?.statuses?.commit()
             
             // Shapeの更新/終了処理を行う
             vc.checkShapesStatus()
@@ -90,26 +95,31 @@ extension Lily.Stage.Playground3D
         public lazy var metalView = Lily.View.MetalView( device:device )
         .setup( caller:self ) { me, vc in
             me.bgColor( .grey )
+            vc._design_once_flag = false
         }
         .buildup( caller:self ) { me, vc in
-            vc.removeAllShapes()
             
             CATransaction.stop {
                 me.rect( vc.rect )
                 vc.renderEngine?.changeScreenSize( size:me.scaledBounds.size )
                 vc.modelRenderTextures.updateBuffers( size:me.scaledBounds.size, viewCount:1 )
-                vc.BBMediumTextures.updateBuffers( size:me.scaledBounds.size, viewCount:1 )
+                vc.mediumTexture.updateBuffers( size:me.scaledBounds.size, viewCount:1 )
             }
             
-            vc.buildupHandler?( self )
+            if !vc._design_once_flag {
+                vc.removeAllShapes()
+                vc.pgDesignHandler?( self )
+                vc.bbRenderFlow.pool.storage?.statuses?.commit()
+                vc._design_once_flag = true
+            }
         }
         .draw( caller:self ) { me, vc, status in
             // 時間の更新
             BBActor.ActorTimer.shared.update()
             // ハンドラのコール
-            vc.loopHandler?( self )
+            vc.pgUpdateHandler?( self )
             // 変更の確定
-            vc.BBRenderFlow.pool.storage?.statuses?.commit()
+            vc.bbRenderFlow.pool.storage?.statuses?.commit()
         
             // Shapeの更新/終了処理を行う
             vc.checkShapesStatus()
@@ -125,7 +135,7 @@ extension Lily.Stage.Playground3D
         #endif
                 
         func checkShapesStatus() {
-            for actor in BBRenderFlow.pool.shapes {
+            for actor in bbRenderFlow.pool.shapes {
                 actor.appearIterate()   // イテレート処理
                 actor.appearInterval()  // インターバル処理
                 
@@ -137,7 +147,7 @@ extension Lily.Stage.Playground3D
         }
         
         func removeAllShapes() {
-            BBRenderFlow.pool.removeAllShapes()
+            bbRenderFlow.pool.removeAllShapes()
         }
         
         public init( 
@@ -153,20 +163,21 @@ extension Lily.Stage.Playground3D
             self.particleCapacity = particleCapacity
             self.textures = textures
             
-            self.BBMediumTextures = .init(device:device )
             self.modelRenderTextures = .init( device:device )
+            self.mediumTexture = .init( device:device )
             
             modelRenderFlow = .init(
                 device:device,
                 viewCount:1,
-                renderTextures:self.modelRenderTextures
+                renderTextures:self.modelRenderTextures,
+                mediumTexture:mediumTexture
             )
                                     
-            BBRenderFlow = .init( 
+            bbRenderFlow = .init( 
                 device:device,
                 viewCount:1,
-                BBMediumTextures:self.BBMediumTextures,
                 renderTextures:self.modelRenderTextures,
+                mediumTexture:mediumTexture,                
                 environment:self.environment,
                 particleCapacity:self.particleCapacity,
                 textures:self.textures
@@ -175,8 +186,7 @@ extension Lily.Stage.Playground3D
             sRGBRenderFlow = .init( 
                 device:device,
                 viewCount:1,
-                BBMediumTextures:self.BBMediumTextures,
-                renderTextures:self.modelRenderTextures,
+                mediumTexture:mediumTexture,
                 environment:self.environment
             )
             
@@ -194,7 +204,7 @@ extension Lily.Stage.Playground3D
             renderEngine = .init( 
                 device:device,
                 size:CGSize( 320, 240 ), 
-                renderFlows:[ modelRenderFlow, BBRenderFlow, sRGBRenderFlow ],
+                renderFlows:[ modelRenderFlow, bbRenderFlow, sRGBRenderFlow ],
                 buffersInFlight:1
             )
 

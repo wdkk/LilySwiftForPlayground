@@ -18,8 +18,8 @@ extension Lily.Stage.Playground3D
     {
         var pass:Lily.Stage.Playground3D.BBPass?
         
-        weak var mediumTextures:BBMediumRenderTextures?
-        weak var renderTextures:ModelRenderTextures?
+        weak var modelRenderTextures:ModelRenderTextures?
+        weak var mediumTexture:MediumTexture?
         
         public private(set) var pool:BBPool
         public private(set) var storage:BBStorage
@@ -35,20 +35,19 @@ extension Lily.Stage.Playground3D
         public init(
             device:MTLDevice,
             viewCount:Int,
-            BBMediumTextures:BBMediumRenderTextures,
             renderTextures:ModelRenderTextures,
+            mediumTexture:MediumTexture,
             environment:Lily.Stage.ShaderEnvironment,
             particleCapacity:Int = 10000,
             textures:[String] = []
         ) 
         {
+            self.modelRenderTextures = renderTextures
+            self.mediumTexture = mediumTexture
+            
             self.pass = .init( device:device )
             self.viewCount = viewCount
             self.particleCapacity = particleCapacity
-            
-            self.mediumTextures = BBMediumTextures
-            
-            self.renderTextures = renderTextures
             
             // レンダラーの作成
             self.alphaRenderer = .init( 
@@ -97,7 +96,7 @@ extension Lily.Stage.Playground3D
         {
             guard let pass = self.pass else { return }
             
-            guard let renderTextures = self.renderTextures else { 
+            guard let renderTextures = self.modelRenderTextures else { 
                 LLLog( "renderTexturesが設定されていません" )
                 return
             }
@@ -115,13 +114,12 @@ extension Lily.Stage.Playground3D
             
             // 共通処理
             pass.updatePass( 
-                mediumTextures:mediumTextures!,
                 rasterizationRateMap:rasterizationRateMap,
                 renderTargetCount:viewCount        
             )
             
             // フォワードレンダリング : パーティクルの描画の設定
-            pass.setDestination( texture:destinationTexture )
+            pass.setDestination( texture:mediumTexture?.resultTexture )
             pass.setDepth( texture:depthTexture )
             
             let encoder = commandBuffer.makeRenderCommandEncoder( descriptor:pass.passDesc! )
