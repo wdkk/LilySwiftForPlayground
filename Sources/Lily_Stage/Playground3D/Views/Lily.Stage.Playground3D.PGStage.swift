@@ -42,7 +42,20 @@ extension Lily.Stage.Playground3D
         public var particleCapacity:Int
         public var textures:[String]
         
-        public var screenSize:LLSizeFloat { LLSizeFloat( width, height ) }
+        //public let touchManager = PGTouchManager()
+        //public var touches:[PGTouch] { return touchManager.touches }
+        //public var releases:[PGTouch] { return touchManager.releases }
+        
+        public var minX:Double { -(metalView.width * 0.5) }
+        public var maxX:Double { metalView.width * 0.5 }
+        public var minY:Double { -(metalView.height * 0.5) }
+        public var maxY:Double { metalView.height * 0.5 }
+        
+        public var screenSize:LLSizeFloat { .init( width, height ) }
+        
+        public var coordRegion:LLRegion { .init( left:minX, top:maxY, right:maxX, bottom:minY ) }
+        
+        public var randomPoint:LLPoint { coordRegion.randomPoint }
     
         // MARK: - パーティクル情報
         public var billboards:Set<Billboard.BBActor> { return Billboard.BBPool.shared.shapes( on:bbRenderFlow.storage ) }
@@ -164,7 +177,9 @@ extension Lily.Stage.Playground3D
             device:MTLDevice, 
             environment:Lily.Stage.ShaderEnvironment = .metallib,
             particleCapacity:Int = 10000,
-            textures:[String] = ["lily", "mask-sparkle", "mask-snow", "mask-smoke", "mask-star"]
+            modelCapacity:Int = 500,
+            textures:[String] = ["lily", "mask-sparkle", "mask-snow", "mask-smoke", "mask-star"],
+            modelAssets:[String] = [ "acacia1", "plane" ]
         )
         {
             self.device = device
@@ -180,7 +195,9 @@ extension Lily.Stage.Playground3D
                 device:device,
                 viewCount:1,
                 renderTextures:self.modelRenderTextures,
-                mediumTexture:mediumTexture
+                mediumTexture:mediumTexture,
+                modelCapacity:modelCapacity,
+                modelAssets:modelAssets
             )
                                     
             bbRenderFlow = .init( 

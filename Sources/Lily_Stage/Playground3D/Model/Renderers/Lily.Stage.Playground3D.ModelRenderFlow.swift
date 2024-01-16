@@ -32,7 +32,9 @@ extension Lily.Stage.Playground3D.Model
             device:MTLDevice, 
             viewCount:Int,
             renderTextures:ModelRenderTextures,
-            mediumTexture:Lily.Stage.Playground3D.MediumTexture
+            mediumTexture:Lily.Stage.Playground3D.MediumTexture,
+            modelCapacity:Int = 500,
+            modelAssets:[String] = []
         ) 
         {
             self.modelRenderTextures = renderTextures
@@ -48,38 +50,12 @@ extension Lily.Stage.Playground3D.Model
             
             self.storage = .init( 
                 device:device, 
-                objCount:64,
+                objCount:modelCapacity,
                 cameraCount:( Lily.Stage.Shared.Const.shadowCascadesCount + 1 ),
-                modelAssets:[ "acacia1" ]
+                modelAssets:modelAssets
             )
             
             super.init( device:device )
-            
-            self.storage.statuses.update { acc, _ in
-                for iid in 0 ..< self.storage.capacity {
-                    let idx = iid / self.storage.cameraCount
-                    let x = idx / 8
-                    let z = idx % 8
-                    // オブジェクトの位置
-                    let world_pos = LLFloatv3( 20.0 + -10.0 * x.f, -2.0, 20.0 + -10.0 * z.f )
-                    
-                    let object_scale = LLFloatv3( 8.0, 8.0, 8.0 )
-                    
-                    let up = LLFloatv3( 0, 1, 0 )
-                    let right = normalize( cross( up, LLFloatv3( 1.0, 0.0, 1.0 ) ) )
-                    let fwd = cross( up, right )
-                    
-                    let world_matrix = float4x4(   
-                        LLFloatv4( fwd * object_scale, 0 ),
-                        LLFloatv4( up * object_scale, 0 ),
-                        LLFloatv4( right * object_scale, 0 ),
-                        LLFloatv4( world_pos, 1 )
-                    )
-                    
-                    acc[iid].modelIndex = 0
-                    acc[iid].matrix = world_matrix
-                }
-            }
         }
         
         public override func changeSize( scaledSize:CGSize ) {
@@ -97,14 +73,35 @@ extension Lily.Stage.Playground3D.Model
         )
         {
             guard let modelPass = modelPass else { return }
+
+            guard let modelRenderTextures = self.modelRenderTextures else { 
+                LLLog( "modelRenderTextureが設定されていません" )
+                return
+            }
             
-            let shadowViewport = modelRenderTextures!.shadowViewport()
-            let shadowScissor = modelRenderTextures!.shadowScissor()
+            guard let mediumTexture = self.mediumTexture else { 
+                LLLog( "mediumTextureが設定されていません" )
+                return
+            }
+            
+            let shadowViewport = modelRenderTextures.shadowViewport()
+            let shadowScissor = modelRenderTextures.shadowScissor()
+            
+            storage.statuses.update { acc, _ in
+                for i in 0 ..< acc.count-1 {
+                    if acc[i].enabled == false || acc[i].state == .trush { continue }
+                    acc[i].position += acc[i].deltaPosition
+                    acc[i].scale += acc[i].deltaScale
+                    acc[i].angle += acc[i].deltaAngle
+                    acc[i].color += acc[i].deltaColor
+                    acc[i].life += acc[i].deltaLife
+                }
+            }
             
             // 共通処理
             // パスの更新
             modelPass.updatePass( 
-                renderTextures:modelRenderTextures!,
+                renderTextures:modelRenderTextures,
                 rasterizationRateMap:rasterizationRateMap,
                 renderTargetCount:viewCount
             )
@@ -144,7 +141,7 @@ extension Lily.Stage.Playground3D.Model
             }
             
             // レンダーパスの書き込み先を指定
-            modelPass.setGBufferDestination( texture:mediumTexture?.resultTexture )
+            modelPass.setGBufferDestination( texture:mediumTexture.resultTexture )
             modelPass.setDepth( texture:depthTexture )
             
             let deferred_shading_encoder = commandBuffer.makeRenderCommandEncoder( descriptor:modelPass.GBufferPassDesc! )
