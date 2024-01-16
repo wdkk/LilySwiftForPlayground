@@ -23,19 +23,21 @@ extension Lily.Stage.Playground2D
     open class PGScreen
     : Lily.View.ViewController
     {
+        public static var current:PGScreen? = nil
+        
         var device:MTLDevice
         
-        var renderEngine:Lily.Stage.StandardRenderEngine?
-        var renderFlow:RenderFlow
-        var sRGBRenderFlow:SRGBRenderFlow
+        public var renderEngine:Lily.Stage.StandardRenderEngine?
         
-        var mediumTextures:Lily.Stage.Playground2D.MediumTextures
+        public var renderFlow:Plane.PlaneRenderFlow
+        public var sRGBRenderFlow:SRGBRenderFlow
         
-        public var clearColor:LLColor = .white
+        public var mediumTextures:Lily.Stage.Playground2D.MediumTextures
         
         public var environment:Lily.Stage.ShaderEnvironment
         public var particleCapacity:Int
         public var textures:[String]
+        public var clearColor:LLColor = .white
 
         public let touchManager = PGTouchManager()
         public var touches:[PGTouch] { return touchManager.touches }
@@ -46,16 +48,9 @@ extension Lily.Stage.Playground2D
         public var minY:Double { -(metalView.height * 0.5) }
         public var maxY:Double { metalView.height * 0.5 }
         
-        public var screenSize:LLSizeFloat { LLSizeFloat( width, height ) }
+        public var screenSize:LLSizeFloat { .init( width, height ) }
         
-        public var coordRegion:LLRegion { 
-            return LLRegion(
-                left:minX,
-                top:maxY,
-                right:maxX,
-                bottom:minY 
-            )
-        }
+        public var coordRegion:LLRegion { .init( left:minX, top:maxY, right:maxX, bottom:minY ) }
         
         public var randomPoint:LLPoint { coordRegion.randomPoint }
         
@@ -67,7 +62,7 @@ extension Lily.Stage.Playground2D
         }
         
         // MARK: - パーティクル情報
-        public var shapes:Set<PGActor> { renderFlow.pool.shapes }
+        public var shapes:Set<Plane.PGActor> { return Plane.PGPool.shared.shapes( on:renderFlow.storage ) }
         
         // MARK: - 外部処理ハンドラ
         public var pgDesignHandler:(( PGScreen )->Void)?
@@ -89,19 +84,22 @@ extension Lily.Stage.Playground2D
             }
             
             if !vc._design_once_flag {
+                PGScreen.current = vc
+                
                 vc.removeAllShapes()
                 vc.pgDesignHandler?( self )
-                vc.renderFlow.pool.storage?.statuses?.commit()
+                vc.renderFlow.storage.statuses.commit()
                 vc._design_once_flag = true
             }
         }
         .draw( caller:self ) { me, vc, status in
+            PGScreen.current = vc
             // 時間の更新
-            PGActor.ActorTimer.shared.update()
+            Plane.PGActor.ActorTimer.shared.update()
             // ハンドラのコール
             vc.pgUpdateHandler?( self )
             // 変更の確定
-            vc.renderFlow.pool.storage?.statuses?.commit()
+            vc.renderFlow.storage.statuses.commit()
             vc.renderFlow.clearColor = self.clearColor
             
             // Shapeの更新/終了処理を行う
@@ -151,19 +149,21 @@ extension Lily.Stage.Playground2D
             }
             
             if !vc._design_once_flag {
+                PGScreen.current = vc
                 vc.removeAllShapes()
                 vc.pgDesignHandler?( self )
-                vc.renderFlow.pool.storage?.statuses?.commit()
+                vc.renderFlow.storage.statuses.commit()
                 vc._design_once_flag = true
             }
         }
         .draw( caller:self ) { me, vc, status in
+            PGScreen.current = vc
             // 時間の更新
-            PGActor.ActorTimer.shared.update()
+            Plane.PGActor.ActorTimer.shared.update()
             // ハンドラのコール
             vc.pgUpdateHandler?( self )
             // 変更の確定
-            vc.renderFlow.pool.storage?.statuses?.commit()
+            vc.renderFlow.storage.statuses.commit()
             vc.renderFlow.clearColor = self.clearColor
             
             // Shapeの更新/終了処理を行う
@@ -190,23 +190,19 @@ extension Lily.Stage.Playground2D
         #endif
                 
         func checkShapesStatus() {
-            for actor in renderFlow.pool.shapes {
-                // イテレート処理
-                actor.appearIterate()
-                // インターバル処理
-                actor.appearInterval()
+            for actor in self.shapes {
+                actor.appearIterate()       // イテレート処理
+                actor.appearInterval()      // インターバル処理
                 
                 if actor.life <= 0.0 {
-                    // 完了前処理
-                    actor.appearCompletion()
-                    // 削除処理
-                    actor.checkRemove()
+                    actor.appearCompletion()    // 完了前処理
+                    actor.checkRemove()         // 削除処理
                 }
             }
         }
         
         func removeAllShapes() {
-            renderFlow.pool.removeAllShapes()
+            Plane.PGPool.shared.removeAllShapes( on:renderFlow.storage )
         }
         
         public init( 
@@ -259,7 +255,7 @@ extension Lily.Stage.Playground2D
             )
 
             // 時間の初期化
-            PGActor.ActorTimer.shared.start()
+            Plane.PGActor.ActorTimer.shared.start()
                         
             startLooping()
         }
