@@ -61,9 +61,9 @@ extension Lily.Stage
         var renderFlows:[BaseRenderFlow] = []
         
         public var camera = Lily.Stage.Camera(
-            perspectiveWith:LLFloatv3( 0, 0, 0 ),
-            direction: LLFloatv3( 0.0, 0.0, 1.0 ), 
-            up: LLFloatv3( 0, 1, 0 ), 
+            perspectiveWith:.init( 0, 0, 0 ),
+            direction: .init( 0.0, 0.0, 1.0 ), 
+            up: .init( 0, 1, 0 ), 
             viewAngle: Float.pi / 3.0, 
             aspectRatio: 320.0 / 240.0, 
             near: 1.0, 
@@ -232,16 +232,8 @@ extension Lily.Stage
                         let stepsize = size / 64.0
                         shadow_cam.position -= fract( dot( center, shadow_cam.up ) / LLFloatv3( repeating:stepsize ) ) * shadow_cam.up * stepsize
                         shadow_cam.position -= fract( dot( center, shadow_cam.right ) / LLFloatv3( repeating:stepsize ) ) * shadow_cam.right * stepsize
-                        
-                        let view_matrix = shadow_cam.calcViewMatrix()
-                        let projection_matrix = shadow_cam.calcProjectionMatrix()
-                        let orientation_matrix = shadow_cam.calcOrientationMatrix()
-                        
-                        uni[view_idx].shadowCameraUniforms[c_idx] = Shared.CameraUniform( 
-                            viewMatrix:view_matrix,
-                            projectionMatrix:projection_matrix,
-                            orientationMatrix:orientation_matrix
-                        )
+                       
+                        uni[view_idx].shadowCameraUniforms[c_idx] = shadow_cam.uniform
                     }
                 }
             }

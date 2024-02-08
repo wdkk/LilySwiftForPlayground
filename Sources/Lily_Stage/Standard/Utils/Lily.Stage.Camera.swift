@@ -34,7 +34,7 @@ extension Lily.Stage
         }
         
         public var near:Float
-    
+
         public var far:Float
 
         public var aspect:Float
@@ -49,13 +49,13 @@ extension Lily.Stage
         public var forward:LLFloatv3 { direction }
         
         public var backward:LLFloatv3 { -direction }
-    
+
         public var isPerspective:Bool { return viewAngle != 0.0 }
        
         public var isParallel:Bool { return viewAngle == 0.0 }
         
         public func calcViewMatrix() -> LLMatrix4x4 { 
-            return Self.invMatrixLookat( position, position + direction, up ) 
+            return invMatrixLookat( position, position + direction, up ) 
         }
         
         public func calcProjectionMatrix() -> LLMatrix4x4 {
@@ -63,8 +63,9 @@ extension Lily.Stage
                 let va_tan = 1.0 / tanf(viewAngle * 0.5)
                 let ys = va_tan
                 let xs = ys / aspect
-                let zs = -(far + near) / (far - near)
-                let ws = -2.0 * (far * near) / (far - near)
+                let zs = far / (near - far)
+                let ws = near * zs
+                
                 return LLMatrix4x4(
                     LLFloatv4( xs,  0,  0,  0 ),
                     LLFloatv4( 0,  ys,  0,  0 ),
@@ -72,12 +73,12 @@ extension Lily.Stage
                     LLFloatv4( 0,   0, ws,  0 ) 
                 )
             }
-            // シャドウカメラ用の行列?
             else {
                 let ys = 2.0 / width
                 let xs = ys / aspect
-                let zs = -1.0 / (far - near)
-                let ws = -2.0 / (far - near) //zs * near
+                let zs = 1.0 / (near - far)
+                let ws = near * zs
+                
                 return LLMatrix4x4(
                     LLFloatv4( xs,  0,  0,  0 ),
                     LLFloatv4( 0,  ys,  0,  0 ),
@@ -88,7 +89,7 @@ extension Lily.Stage
         }
         
         public func calcOrientationMatrix() -> LLMatrix4x4 {
-            return Camera.invMatrixLookat( .zero, self.direction, self.up )
+            return invMatrixLookat( .zero, direction, up )
         }
         
         public mutating func rotate( on axis:LLFloatv3, radians:Float ) {
@@ -122,7 +123,7 @@ extension Lily.Stage
             up = cross( right, direction )
         }
         
-        public static func invMatrixLookat( _ eye:LLFloatv3, _ to:LLFloatv3, _ up:LLFloatv3 ) -> LLMatrix4x4 {
+        public func invMatrixLookat( _ eye:LLFloatv3, _ to:LLFloatv3, _ up:LLFloatv3 ) -> LLMatrix4x4 {
             //let z = normalize( to - eye )
             let z = normalize( eye - to )
             let x = normalize( cross( up, z ) )
@@ -181,5 +182,18 @@ extension Lily.Stage
         
             self.orthogonalize( fromForward:direction )
         }
+        
+        public var uniform:Lily.Stage.Shared.CameraUniform {
+            let vM = self.calcViewMatrix()
+            let projM = self.calcProjectionMatrix()
+            let orientationM = self.calcOrientationMatrix()
+            
+            return .init(
+                viewMatrix:vM, 
+                projectionMatrix:projM,
+                orientationMatrix:orientationM
+            )
+        }
     }
+
 }

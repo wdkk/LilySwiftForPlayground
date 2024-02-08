@@ -19,22 +19,21 @@ extension Lily.Stage.Playground3D.Model
         weak var modelRenderTextures:ModelRenderTextures?
         weak var mediumTexture:Lily.Stage.Playground3D.MediumTexture?
         
-        var modelPass:ModelPass?
+        public var modelPass:ModelPass?
         
-        public private(set) var storage:ModelStorage
+        weak var storage:ModelStorage?
         
-        var modelObjectRenderer:ModelObjectRenderer?
-        var modelLightingRenderer:ModelLightingRenderer?
+        public var modelObjectRenderer:ModelObjectRenderer?
+        public var modelLightingRenderer:ModelLightingRenderer?
 
-        let viewCount:Int
+        public let viewCount:Int
         
         public init(
             device:MTLDevice, 
             viewCount:Int,
             renderTextures:ModelRenderTextures,
             mediumTexture:Lily.Stage.Playground3D.MediumTexture,
-            modelCapacity:Int = 500,
-            modelAssets:[String] = []
+            storage:ModelStorage
         ) 
         {
             self.modelRenderTextures = renderTextures
@@ -48,12 +47,7 @@ extension Lily.Stage.Playground3D.Model
             modelObjectRenderer = .init( device:device, viewCount:viewCount )
             modelLightingRenderer = .init( device:device, viewCount:viewCount )
             
-            self.storage = .init( 
-                device:device, 
-                objCount:modelCapacity,
-                cameraCount:( Lily.Stage.Shared.Const.shadowCascadesCount + 1 ),
-                modelAssets:modelAssets
-            )
+            self.storage = storage
             
             super.init( device:device )
         }
@@ -81,6 +75,11 @@ extension Lily.Stage.Playground3D.Model
             
             guard let mediumTexture = self.mediumTexture else { 
                 LLLog( "mediumTextureが設定されていません" )
+                return
+            }
+            
+            guard let storage = self.storage else {
+                LLLog( "storageがありません" )
                 return
             }
             
@@ -115,7 +114,6 @@ extension Lily.Stage.Playground3D.Model
                 shadow_encoder?
                 .label( "Playground3D Shadow Cascade \(c_idx)" )
                 .cullMode( .front )
-                .frontFacing( .counterClockwise )
                 .depthClipMode( .clamp )
                 .depthStencilState( modelPass.shadowDepthState )
                 .viewport( shadowViewport )
@@ -148,8 +146,7 @@ extension Lily.Stage.Playground3D.Model
             
             deferred_shading_encoder?
             .label( "Playground3D G-Buffer Render" )
-            .cullMode( .none )
-            .frontFacing( .counterClockwise )
+            .cullMode( .front )
             .depthStencilState( modelPass.GBufferDepthState! )
             .viewports( viewports )
             .vertexAmplification( count:viewCount, viewports:viewports )

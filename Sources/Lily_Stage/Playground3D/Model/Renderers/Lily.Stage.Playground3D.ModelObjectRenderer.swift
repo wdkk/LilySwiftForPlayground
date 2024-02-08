@@ -22,11 +22,9 @@ extension Lily.Stage.Playground3D.Model
     {
         public var device: MTLDevice
         
-        var objectPipeline: MTLRenderPipelineState?
-        var shadowPipeline: MTLRenderPipelineState?
+        public var objectPipeline: MTLRenderPipelineState?
+        public var shadowPipeline: MTLRenderPipelineState?
         
-        public let cameraCount:Int = Lily.Stage.Shared.Const.shadowCascadesCount + 1
-
         public init( device:MTLDevice, viewCount:Int ) {
             self.device = device
             let library = try! Lily.Stage.metalLibrary( of:device )
@@ -49,11 +47,11 @@ extension Lily.Stage.Playground3D.Model
             }
             objectPipeline = try! device.makeRenderPipelineState(descriptor: desc, options: [], reflection: nil)
             
-            
             desc.label = "Playground3D Objects Shadow"
             desc.vertexShader( .init( device:device, mtllib:library, shaderName:"Lily_Stage_Playground3D_Model_Object_Shadow_Vs" ) )
             desc.fragmentFunction = nil 
             desc.rasterSampleCount = Lily.Stage.BufferFormats.sampleCount
+            
             desc.colorAttachments[IDX_GBUFFER_0].pixelFormat = .invalid
             desc.colorAttachments[IDX_GBUFFER_1].pixelFormat = .invalid
             desc.colorAttachments[IDX_GBUFFER_2].pixelFormat = .invalid
@@ -75,10 +73,10 @@ extension Lily.Stage.Playground3D.Model
             guard let obj_pp = objectPipeline else { return }
             
             renderEncoder?.setRenderPipelineState( obj_pp )
-            for (k, v) in storage.models {
-                var model_idx = v.modelIndex
+            for (_, v) in storage.models {
                 guard let data = v.meshData, let mesh = data.mesh else { return }
-            
+                var model_idx = v.modelIndex
+                
                 renderEncoder?.setVertexBuffer( mesh.vertexBuffer, offset:0, index:0 )
                 renderEncoder?.setVertexBuffer( storage.statuses.metalBuffer, offset:0, index:1 )
                 renderEncoder?.setVertexBuffer( globalUniforms?.metalBuffer, offset:0, index:2 )
@@ -108,15 +106,19 @@ extension Lily.Stage.Playground3D.Model
 
             var cam_idx = cascadeIndex + 1
             
-            for (k, v) in storage.models {
-                var model_idx = v.modelIndex
+            for (_, v) in storage.models {
                 guard let data = v.meshData, let mesh = data.mesh else { return }
+                var model_idx = v.modelIndex
                 
                 renderEncoder?.setVertexBuffer( mesh.vertexBuffer, offset: 0, index: 0 )
                 renderEncoder?.setVertexBuffer( storage.statuses.metalBuffer, offset:0, index:1 )
                 renderEncoder?.setVertexBytes( &cam_idx, length:4, index:2 )
                 renderEncoder?.setVertexBytes( &model_idx, length:4, index:3 ) 
-                renderEncoder?.setVertexBytes( shadowCamVPMatrices, length:MemoryLayout<LLMatrix4x4>.stride * shadowCamVPMatrices.count, index:6 )
+                renderEncoder?.setVertexBytes( 
+                    shadowCamVPMatrices, 
+                    length:MemoryLayout<LLMatrix4x4>.stride * shadowCamVPMatrices.count,
+                    index:6 
+                )
                 
                 renderEncoder?.drawIndexedPrimitives(
                     type: .triangle,
