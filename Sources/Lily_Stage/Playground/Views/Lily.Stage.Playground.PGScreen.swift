@@ -46,6 +46,7 @@ extension Lily.Stage.Playground
         
         // MARK: プロパティ・アクセサ
         public var clearColor:LLColor = .white
+        
         public var cubeMap:String? = nil {
             didSet { modelStorage?.setCubeMap(device:device, assetName:cubeMap ) }
         }
@@ -87,19 +88,37 @@ extension Lily.Stage.Playground
         // MARK: - 外部処理ハンドラ
         public var pgDesignHandler:(( PGScreen )->Void)?
         public var pgUpdateHandler:(( PGScreen )->Void)?
+        public var pgResizeHandler:(( PGScreen )->Void)?
+       
         private var _design_once = false
-        
-        public func designProc( vc:PGScreen ) {
-            if !vc._design_once {
+        private var _design_mutex = Lily.View.RecursiveMutex()
+        private var _design_start_time:LLInt64 = 0
+
+        public func redesign() {
+            self.designProc( vc:self, force:true )
+        }
+    
+        // MARK: - 更新時関数群
+        public func designProc( vc:PGScreen, force:Bool = false ) {
+            // 強制描画でなくかつonceが効いているときはスキップ
+            if !force && vc._design_once { return }
+            // 250msより短い時は実行しない
+            if LLClock.now - vc._design_start_time < 250 { return }
+            
+            // redesignの繰り返し呼び出しの防止をしつつ処理を実行
+            _design_mutex.lock {
+                // 実行時の時間を取る
+                vc._design_start_time = LLClock.now
+                
                 vc.setCurrentStorage()
                 
                 vc.removeAllShapes()
                 vc.pgDesignHandler?( self )
-
+                
                 vc.modelStorage?.statuses.commit()
                 vc.bbStorage?.statuses.commit()
                 vc.planeStorage?.statuses.commit()
-
+                
                 vc._design_once = true
             }
         }
@@ -136,6 +155,7 @@ extension Lily.Stage.Playground
             ) 
         }
         
+        // Metalビュー
         public lazy var metalView = Lily.View.MetalView( device:device )
         .setup( caller:self ) { me, vc in
             me.bgColor( .clear )
@@ -150,6 +170,9 @@ extension Lily.Stage.Playground
                 vc.mediumTexture.updateBuffers( size:me.scaledBounds.size, viewCount:1 )
             }
             
+            // リサイズ処理の受け入れハンドラ
+            vc.pgResizeHandler?( vc )
+            // リサイズの独自処理の後にdesignを試みる. リサイズハンドラでredesignをした場合は無視される
             vc.designProc( vc:vc )
         }
         .draw( caller:self ) { me, vc, status in
@@ -296,23 +319,11 @@ extension Lily.Stage.Playground
             self.mediumTexture = .init( device:device )
             
             // ストレージの生成
-            self.planeStorage = .init( 
-                device:device, 
-                capacity:2000,
-                textures:["lily", "mask-sparkle", "mask-snow", "mask-smoke", "mask-star"]
-            )
+            self.planeStorage = .playgroundDefault( device:device )
             
-            self.modelStorage = .init( 
-                device:device, 
-                modelCapacity:500,
-                modelAssets:[ "cottonwood1", "acacia1", "plane" ]
-            )
+            self.modelStorage = .playgroundDefault( device:device )
     
-            self.bbStorage = .init( 
-                device:device, 
-                capacity:2000,
-                textures:["lily", "mask-sparkle", "mask-snow", "mask-smoke", "mask-star"]
-            )
+            self.bbStorage = .playgroundDefault( device:device )
             
             // レンダーフローの生成
             self.clearRenderFlow = .init(
@@ -364,16 +375,7 @@ extension Lily.Stage.Playground
         open override func setup() {
             super.setup()
             self.backgroundColor = .clear
-            /*
-            #if os(macOS)
-            self.view.layer?.backgroundColor = LLColor.clear.cgColor
-            metalView.backgroundColor = LLColor.clear.cgColor            
-            #else
-            self.view.layer.backgroundColor = LLColor.clear.cgColor
-            metalView.layer.backgroundColor = LLColor.clear.cgColor
-            #endif
-            */
-            
+
             addSubview( metalView )
             
             renderEngine = .init( 
@@ -433,8 +435,7 @@ extension Lily.Stage.Playground
             self.pgDesignHandler = design
             self.pgUpdateHandler = update
             
-            self._design_once = false
-            self.designProc( vc:self )
+            self.designProc( vc:self, force:true )
         }
     }
 }

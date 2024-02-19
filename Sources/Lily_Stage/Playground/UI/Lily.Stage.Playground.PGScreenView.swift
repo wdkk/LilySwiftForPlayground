@@ -31,8 +31,10 @@ extension Lily.Stage.Playground
         var planeStorage:Plane.PlaneStorage?
         var modelStorage:Model.ModelStorage?
         var bbStorage:Billboard.BBStorage?
-        public var design:(( PGScreen )->Void)?
-        public var update:(( PGScreen )->Void)?
+        
+        var designHandler:(( PGScreen )->Void)?
+        var updateHandler:(( PGScreen )->Void)?
+        var resizeHandler:(( PGScreen )->Void)?
         
         var visibled:Binding<Bool>
                 
@@ -44,7 +46,8 @@ extension Lily.Stage.Playground
             modelStorage:Model.ModelStorage?,
             bbStorage:Billboard.BBStorage?,
             design:(( PGScreen )->Void)?,
-            update:(( PGScreen )->Void)? 
+            update:(( PGScreen )->Void)?,
+            resize:(( PGScreen )->Void)?
         )
         {
             self.device = device
@@ -55,8 +58,9 @@ extension Lily.Stage.Playground
             self.modelStorage = modelStorage
             self.bbStorage = bbStorage
         
-            self.design = design
-            self.update = update
+            self.designHandler = design
+            self.updateHandler = update
+            self.resizeHandler = resize
         }
         
         func makeViewController( context:Context ) -> PGScreen {
@@ -67,14 +71,15 @@ extension Lily.Stage.Playground
                 bbStorage:self.bbStorage,
                 modelStorage:self.modelStorage
             )
-            
-            screen.pgDesignHandler = self.design
-            screen.pgUpdateHandler = self.update
-            
+  
             return screen        
         }
         
         func updateViewController( _ vc:PGScreen, context:Context ) {
+            vc.pgDesignHandler = self.designHandler
+            vc.pgUpdateHandler = self.updateHandler
+            vc.pgResizeHandler = self.resizeHandler
+
             if visibled.wrappedValue == true {
                 vc.rebuild()
                 vc.startLooping()
@@ -110,68 +115,42 @@ extension Lily.Stage.Playground
         var planeStorage:Plane.PlaneStorage?
         var modelStorage:Model.ModelStorage?
         var bbStorage:Billboard.BBStorage?
-        public var design:(( PGScreen )->Void)?
-        public var update:(( PGScreen )->Void)?
         
-        public init( 
+        var designHandler:(( PGScreen )->Void)?
+        var updateHandler:(( PGScreen )->Void)?
+        var resizeHandler:(( PGScreen )->Void)?
+        
+        public init
+        ( 
             device:MTLDevice,
             environment:Lily.Stage.ShaderEnvironment = .string,
-            planeCapacity:Int? = 2000,
-            planeTextures:[String]? = ["lily", "mask-sparkle", "mask-snow", "mask-smoke", "mask-star"],
-            modelCapacity:Int? = 500,
-            modelAssets:[String]? = [ "cottonwood1", "acacia1", "plane" ],
-            billboardCapacity:Int? = 2000,
-            billboardTextures:[String]? = ["lily", "mask-sparkle", "mask-snow", "mask-smoke", "mask-star"],
-            design:(( PGScreen )->Void)? = nil,
-            update:(( PGScreen )->Void)? = nil 
+            design:(( PGScreen )->Void)?,
+            update:(( PGScreen )->Void)? = nil,
+            resize:(( PGScreen )->Void)? = nil
         )
         {
             self.device = device
             self.environment = environment
             
-            // ストレージの生成
-            if let planeCapacity = planeCapacity,
-               let planeTextures = planeTextures 
-            {
-                self.planeStorage = .init( 
-                    device:device, 
-                    capacity:planeCapacity,
-                    textures:planeTextures
-                )
-            }
+            self.planeStorage = .playgroundDefault( device:device )
+            self.modelStorage = .playgroundDefault( device:device )
+            self.bbStorage = .playgroundDefault( device:device )
             
-            if let modelAssets = modelAssets,
-               let modelCapacity = modelCapacity
-            {
-                self.modelStorage = .init( 
-                    device:device, 
-                    modelCapacity:modelCapacity,                    
-                    modelAssets:modelAssets
-                )
-            }
-    
-            if let billboardCapacity = billboardCapacity,
-               let billboardTextures = billboardTextures
-            {
-                self.bbStorage = .init( 
-                    device:device, 
-                    capacity:billboardCapacity,
-                    textures:billboardTextures
-                )
-            }
-            
-            self.design = design
-            self.update = update
+            self.designHandler = design
+            self.updateHandler = update
+            self.resizeHandler = resize
         }
         
-        public init( 
+        public init
+        ( 
             device:MTLDevice,
             environment:Lily.Stage.ShaderEnvironment = .string,
             planeStorage:Lily.Stage.Playground.Plane.PlaneStorage? = nil,
             modelStorage:Lily.Stage.Playground.Model.ModelStorage? = nil,
             bbStorage:Lily.Stage.Playground.Billboard.BBStorage? = nil,
             design:(( PGScreen )->Void)?,
-            update:(( PGScreen )->Void)? 
+            update:(( PGScreen )->Void)? = nil,
+            resize:(( PGScreen )->Void)? = nil
         )
         {
             self.device = device
@@ -181,32 +160,37 @@ extension Lily.Stage.Playground
             self.modelStorage = modelStorage
             self.bbStorage = bbStorage
             
-            self.design = design
-            self.update = update
+            self.designHandler = design
+            self.updateHandler = update
+            self.resizeHandler = resize
         }
         
         public var body: some View 
         {
-            let v = PGScreenCoreView(
-                device: device,
-                visibled:$visibled,
-                environment:self.environment,
-                planeStorage:self.planeStorage,
-                modelStorage:self.modelStorage,
-                bbStorage:self.bbStorage,
-                design:self.design,
-                update:self.update
-            )
-            .background( .clear )
-            .onAppear { visibled = true }
-            .onDisappear { visibled = false }
-            // 画面表示状態に対して反応させるためのonChange
-            if #available(iOS 17.0, * ), #available(macOS 14.0, *) {
-                v.onChange( of:visibled, initial:false ) { _, _ in }
-            } 
-            else {
-                v.onChange( of:visibled ) { _ in }
+            GeometryReader { geo in
+                let v = PGScreenCoreView(
+                    device: device,
+                    visibled:$visibled,
+                    environment:self.environment,
+                    planeStorage:self.planeStorage,
+                    modelStorage:self.modelStorage,
+                    bbStorage:self.bbStorage,
+                    design:self.designHandler,
+                    update:self.updateHandler,
+                    resize:self.resizeHandler
+                )
+                .background( .clear )
+                .onAppear { visibled = true }
+                .onDisappear { visibled = false }
+                // 画面表示状態に対して反応させるためのonChange
+                if #available( iOS 17.0, * ), #available( macOS 14.0, *) {
+                    v.onChange( of:visibled, initial:false ) { _, _ in }
+                } 
+                else {
+                    v.onChange( of:visibled ) { _ in }
+                }
+
             }
-        }   
+        }
     }
 }
