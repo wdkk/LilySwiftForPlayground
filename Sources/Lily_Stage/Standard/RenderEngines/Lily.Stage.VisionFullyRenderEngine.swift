@@ -61,26 +61,29 @@ extension Lily.Stage
         var renderFlows:[BaseRenderFlow?] = []
         
         /*
-        public var camera = Lily.Stage.Camera(
+        public var camera:Lily.Stage.Camera = .init(
             perspectiveWith:.init( 0, 0, 0 ),
             direction: .init( 0.0, 0.0, 1.0 ), 
             up: .init( 0, 1, 0 ), 
             viewAngle: Float.pi / 3.0, 
             aspectRatio: 320.0 / 240.0, 
-            near: 1.0, 
-            far: 600.0
+            near: 10.0, 
+            far: 60000.0
         )
         */
         
         public var camera:Lily.Stage.Camera = .init(
-            perspectiveWith:LLFloatv3( 0.0, 2600, 5000.0 ),
-            direction: LLFloatv3( 0.0, -0.5, -1.0 ), 
-            up: LLFloatv3( 0, 1, 0 ), 
+            perspectiveWith: .init( 0.0, 2600, 5000.0 ),
+            direction: .init( 0.0, -0.5, -1.0 ), 
+            up: .init( 0, 1, 0 ), 
             viewAngle: Float.pi / 3.0, 
             aspectRatio: 320.0 / 240.0, 
             near: 10.0, 
             far: 60000.0
         )
+        
+        public var setupHandler:(()->Void)?
+        public var updateHandler:(()->Void)?
         
         public init( _ layerRenderer:LayerRenderer, renderFlows:[BaseRenderFlow?], buffersInFlight:Int ) {
             self.layerRenderer = layerRenderer
@@ -107,7 +110,10 @@ extension Lily.Stage
                     fatalError("Failed to initialize ARSession")
                 }
                 
-                let renderThread = Thread { self.renderLoop() }
+                let renderThread = Thread {
+                    self.setupHandler?()
+                    self.renderLoop() 
+                }
                 renderThread.name = "Render Thread"
                 renderThread.start()
             }
@@ -125,7 +131,7 @@ extension Lily.Stage
                 } 
                 else {
                     autoreleasepool { 
-                        self.renderFrame() 
+                        self.updateHandler?()
                     }
                 }
             }
@@ -133,7 +139,7 @@ extension Lily.Stage
         
         public func changeScreenSize( size:CGSize ) {
             screenSize = size.llSizeFloat
-            renderFlows.forEach { $0.changeSize( scaledSize:size ) }
+            renderFlows.forEach { $0?.changeSize( scaledSize:size ) }
             camera.aspect = (size.width / size.height).f
         }
         
@@ -165,7 +171,7 @@ extension Lily.Stage
                 bottomTangent: Double(view.tangents[3]),
                 nearZ: Double(drawable.depthRange.y),
                 farZ: Double(drawable.depthRange.x),
-                reverseZ:true
+                reverseZ:false
             )
             
             return LLMatrix4x4( projection )
@@ -193,7 +199,6 @@ extension Lily.Stage
             uniforms.update { uni in
                 for view_idx in 0 ..< viewCount {
                     // TODO: アンカーなどからマトリクスを得ているが、アンカーとdrawableからcameraをつくるべき
-                    // ビューマトリックスの更新0
                     let vM = self.calcViewMatrix(
                         drawable:drawable,
                         deviceAnchor:deviceAnchor,
@@ -208,6 +213,15 @@ extension Lily.Stage
                     
                     let orientationM = self.calcOrientationMatrix( viewMatrix:vM )
                     
+                    /*
+                    // ビューマトリックスの更新
+                    let vM = camera.calcViewMatrix()
+                    
+                    let projM = camera.calcProjectionMatrix()
+                    
+                    let orientationM = camera.calcOrientationMatrix()
+                    */
+                    
                     let camera_uniform = Shared.CameraUniform(
                         viewMatrix:vM, 
                         projectionMatrix:projM,
@@ -220,43 +234,46 @@ extension Lily.Stage
                         screenSize:screenSize
                     )
                     
-                    let cascade_sizes:[Float] = [ 4.0, 16.0, 64.0 ]
+                    let cascade_sizes:[Float] = [ 400.0, 1600.0, 6400.0 ]
                     let cascade_distances = makeCascadeDistances( sizes:cascade_sizes, viewAngle:camera.viewAngle )
                     
                     // カスケードシャドウのカメラユニフォームを作成
                     for c_idx in 0 ..< Shared.Const.shadowCascadesCount {
-                        // TODO: cameraの計算ができていないのでシャドウは正しくない
-                        // sun cascade back-planeの中央を計算
                         let center = camera.position + camera.direction * cascade_distances[c_idx]
                         let size = cascade_sizes[c_idx]
-                        
+
                         var shadow_cam = Camera( 
                             parallelWith:center - uni[view_idx].sunDirection * size,
                             direction:uni[view_idx].sunDirection,
-                            up: LLFloatv3( 0, 1, 0 ),
+                            up: .init( 0, 1, 0 ),
                             width:size * 2.0,
                             height:size * 2.0,
                             near:0.0,
                             far:size * 2.0
                         )
                         
-                        // Stepsizeはテクセルのサイズの倍数にする
+                        // Stepsizeはテクセルのサイズの倍数
                         let stepsize = size / 64.0
-                        shadow_cam.position -= fract( dot( center, shadow_cam.up ) / LLFloatv3( repeating:stepsize ) ) * shadow_cam.up * stepsize
-                        shadow_cam.position -= fract( dot( center, shadow_cam.right ) / LLFloatv3( repeating:stepsize ) ) * shadow_cam.right * stepsize
-                       
+                        let stepsizes = LLFloatv3( repeating:stepsize )
+                        shadow_cam.position -= fract( dot( center, shadow_cam.up ) / stepsizes ) * shadow_cam.up * stepsize
+                        shadow_cam.position -= fract( dot( center, shadow_cam.right ) / stepsizes ) * shadow_cam.right * stepsize
+                        
                         uni[view_idx].shadowCameraUniforms[c_idx] = shadow_cam.uniform
                     }
                 }
             }
         }
                 
-        public func renderFrame() {
-            defer { uniforms.next() /* リングバッファを回す */ }
+        public func update(
+            completion:(( MTLCommandBuffer? ) -> ())? = nil
+        )
+        {
+            defer { uniforms.next() }
             
             guard let frame = layerRenderer.queryNextFrame() else { return }
             
             frame.startUpdate()
+            // frameの間で処理したいことを書く
             frame.endUpdate()
             
             guard let timing = frame.predictTiming() else { return }
@@ -281,7 +298,7 @@ extension Lily.Stage
             layerRenderDrawable.deviceAnchor = deviceAnchor
             
             //-- 依存があるレンダリング定数設定 --//
-            let rasterizationRateMap:Lily.Metal.RasterizationRateMap? = layerRenderDrawable.rasterizationRateMaps.first
+            let rasterizationRateMap = layerRenderDrawable.rasterizationRateMaps.first
             
             let viewports = layerRenderDrawable.views.map { $0.textureMap.viewport }
             let viewCount = layerRenderer.configuration.layout == .layered ? layerRenderDrawable.views.count : 1
@@ -298,7 +315,7 @@ extension Lily.Stage
             
             // 共通処理
             renderFlows.forEach {
-                $0.render(
+                $0?.render(
                     commandBuffer:commandBuffer,
                     rasterizationRateMap:rasterizationRateMap,
                     viewports:viewports, 
@@ -314,6 +331,8 @@ extension Lily.Stage
             commandBuffer.commit()
             
             frame.endSubmission()
+            
+            completion?( commandBuffer )
         }
     }
     
