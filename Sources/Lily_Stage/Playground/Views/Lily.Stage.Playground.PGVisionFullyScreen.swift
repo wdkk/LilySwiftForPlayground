@@ -15,15 +15,16 @@ import UIKit
 extension Lily.Stage.Playground
 { 
     open class PGVisionFullyScreen
-    {
+    : Lily_Stage_Playground_PGSceneProtocol
+    {        
         // MARK: システム
         var device:MTLDevice        
         public var renderEngine:Lily.Stage.VisionFullyRenderEngine?
         public private(set) var environment:Lily.Stage.ShaderEnvironment
         
         // MARK: 描画テクスチャ
-        public private(set) var modelRenderTextures:Model.ModelRenderTextures
-        public private(set) var mediumTexture:MediumTexture
+        public var modelRenderTextures:Model.ModelRenderTextures
+        public var mediumTexture:MediumTexture
         
         // MARK: ストレージ
         public var planeStorage:Plane.PlaneStorage?
@@ -48,18 +49,20 @@ extension Lily.Stage.Playground
         public var touches:[PGTouch] { return touchManager.touches }
         public var releases:[PGTouch] { return touchManager.releases }
         
-        /*
-        public var minX:Double { -(metalView.width * 0.5) }
-        public var maxX:Double { metalView.width * 0.5 }
-        public var minY:Double { -(metalView.height * 0.5) }
-        public var maxY:Double { metalView.height * 0.5 }
+        public var minX:Double { -(renderEngine != nil ? renderEngine!.screenSize.width.d * 0.5 : -1.0) }
+        public var maxX:Double { renderEngine != nil ? renderEngine!.screenSize.width.d * 0.5 : 1.0 }
+        public var minY:Double { -(renderEngine != nil ? renderEngine!.screenSize.height.d * 0.5 : -1.0) }
+        public var maxY:Double { renderEngine != nil ? renderEngine!.screenSize.height.d * 0.5 : 1.0 }
         
-        public var screenSize:LLSizeFloat { .init( width, height ) }
+        public var screenSize:LLSizeFloat { 
+            let wid = renderEngine != nil ? renderEngine!.screenSize.width : 2.0
+            let hgt = renderEngine != nil ? renderEngine!.screenSize.height : 2.0
+            return .init( wid, hgt ) 
+        }
         
         public var coordRegion:LLRegion { .init( left:minX, top:maxY, right:maxX, bottom:minY ) }
 
         public var randomPoint:LLPoint { coordRegion.randomPoint }
-        */
         
         // MARK: - タッチ情報ヘルパ
         private var latest_touch = PGTouch( xy:.zero, uv: .zero, state:.touch )
@@ -68,144 +71,16 @@ extension Lily.Stage.Playground
             return latest_touch
         }
         
-        // MARK: - 2Dパーティクル情報
-        public var shapes:Set<Plane.PGActor> { 
-            if let storage = planeStorage { return Plane.PGPool.shared.shapes( on:storage ) }
-            return []
-        }
-        
-        // MARK: - 3Dビルボード情報
-        public var billboards:Set<Billboard.BBActor> { 
-            if let storage = bbStorage { return Billboard.BBPool.shared.shapes( on:storage ) }
-            return []
-        }
-        
-        // MARK: - 3Dモデル情報
-        public var models:Set<Model.ModelActor> { 
-            if let storage = modelStorage { return Model.ModelPool.shared.shapes( on:storage ) }
-            return []
-        }
-        
         // MARK: - 外部処理ハンドラ
         public var pgDesignHandler:(( PGVisionFullyScreen )->Void)?
         public var pgUpdateHandler:(( PGVisionFullyScreen )->Void)?
         public var pgResizeHandler:(( PGVisionFullyScreen )->Void)?
        
-        private var _design_once = false
-        private var _design_mutex = Lily.View.RecursiveMutex()
-
-        public func redesign() {
-            self.designProc( vc:self, force:true )
-        }
-    
-        // MARK: - 更新時関数群
-        public func designProc( vc:PGVisionFullyScreen, force:Bool = false ) {
-            // 強制描画でなくかつonceが効いているときはスキップ
-            if !force && vc._design_once { return }
-
-            // redesignの繰り返し呼び出しの防止をしつつ処理を実行
-            _design_mutex.lock {
-                Serial.shared.serialize {
-                    vc.setCurrentStorage()
-                    
-                    vc.removeAllShapes()
-                    
-                    vc.pgDesignHandler?( self )
-                    
-                    vc.modelStorage?.statuses.commit()
-                    vc.bbStorage?.statuses.commit()
-                    vc.planeStorage?.statuses.commit()
-                    
-                    vc._design_once = true
-                }
-            }
-        }
-        
-        public func updateProc( 
-            vc:PGVisionFullyScreen
-        ) 
-        {
-            Serial.shared.serialize {
-                vc.setCurrentStorage()
+        public var _design_mutex = Lily.View.RecursiveMutex()
+        private var _design_once = false        
+        public func alreadySetupDesignOnce() -> Bool { _design_once }
+        public func designOnce( _ torf:Bool ) { _design_once = torf }
                 
-                // 時間の更新
-                Plane.PGActor.ActorTimer.shared.update()
-                Billboard.BBActor.ActorTimer.shared.update()
-                Model.ModelActor.ActorTimer.shared.update()
-                
-                // ハンドラのコール
-                vc.pgUpdateHandler?( self )
-                // 変更の確定
-                vc.modelStorage?.statuses.commit()
-                vc.bbStorage?.statuses.commit()
-                vc.planeStorage?.statuses.commit()
-                
-                // 背景色の更新
-                vc.clearRenderFlow?.clearColor = self.clearColor
-                vc.modelStorage?.clearColor = self.clearColor
-                
-                // Shapeの更新/終了処理を行う
-                vc.checkPlanesStatus()
-                vc.checkBillboardsStatus()
-                vc.checkModelsStatus()
-                
-                vc.renderEngine?.update(
-                    completion: { commandBuffer in
-                        self.touchManager.changeBegansToTouches()
-                        self.touchManager.resetReleases()
-                    }
-                ) 
-            }
-        }
-        
-        func setCurrentStorage() {
-            Plane.PlaneStorage.current = self.planeStorage
-            Billboard.BBStorage.current = self.bbStorage
-            Model.ModelStorage.current = self.modelStorage
-        }
-                
-        func checkPlanesStatus() {
-            for actor in self.shapes {
-                actor.appearIterate()       // イテレート処理
-                actor.appearInterval()      // インターバル処理
-                
-                if actor.life <= 0.0 {
-                    actor.appearCompletion()    // 完了前処理
-                    actor.checkRemove()         // 削除処理
-                }
-            }
-        }
-        
-        func checkBillboardsStatus() {
-            for actor in self.billboards {
-                actor.appearIterate()   // イテレート処理
-                actor.appearInterval()  // インターバル処理
-                
-                if actor.life <= 0.0 {
-                    actor.appearCompletion()    // 完了前処理
-                    actor.checkRemove()         // 削除処理
-                }
-            }
-        }
-        
-        func checkModelsStatus() {
-            for actor in self.models {
-                actor.appearIterate()   // イテレート処理
-                actor.appearInterval()  // インターバル処理
-                
-                if actor.life <= 0.0 {
-                    actor.appearCompletion()    // 完了前処理
-                    actor.checkRemove()         // 削除処理
-                }
-            }
-        }
-        
-        func removeAllShapes() {
-            Plane.PGPool.shared.removeAllShapes( on:planeStorage )
-            Billboard.BBPool.shared.removeAllShapes( on:bbStorage )
-            Model.ModelPool.shared.removeAllShapes( on:modelStorage )
-        }
-        
         public init( 
             layerRenderer:LayerRenderer,
             environment:Lily.Stage.ShaderEnvironment = .metallib,
@@ -227,63 +102,92 @@ extension Lily.Stage.Playground
             self.pgUpdateHandler = scene.update
             self.pgResizeHandler = scene.resize
                         
+            self.renderEngine = .init( layerRenderer, buffersInFlight:3 )
+            
+            // 時間の初期化
+            Plane.PGActor.ActorTimer.shared.start()
+            Billboard.BBActor.ActorTimer.shared.start()
+            Model.ModelActor.ActorTimer.shared.start()
+            
+            self.renderEngine?.setupHandler = {
+                self.makeRenderFlows(
+                    device:self.device, 
+                    environment:self.environment, 
+                    viewCount:self.renderEngine!.viewCount 
+                )
+                
+                self.renderEngine?.setRenderFlows( [
+                    self.clearRenderFlow,
+                    self.modelRenderFlow,
+                    self.bbRenderFlow, 
+                    self.planeRenderFlow, 
+                    self.sRGBRenderFlow
+                ] )
+                
+                self.designOnce( false )
+                self.designProc( vc:self )
+            }
+            
+            self.renderEngine?.updateHandler = { 
+                self.updateProc( vc:self ) 
+                
+                self.renderEngine?.update(
+                    completion: { commandBuffer in
+                        self.touchManager.changeBegansToTouches()
+                        self.touchManager.resetReleases()
+                    }
+                ) 
+            }
+            
+            self.renderEngine?.startRenderLoop()
+        }
+        
+        func makeRenderFlows( 
+            device:MTLDevice,
+            environment:Lily.Stage.ShaderEnvironment,
+            viewCount:Int
+        )
+        {
             // レンダーフローの生成
             self.clearRenderFlow = .init(
                 device:device,
-                environment:self.environment,
-                viewCount:1,
-                modelRenderTextures:modelRenderTextures,
-                mediumTexture:mediumTexture
+                environment:environment,
+                viewCount:viewCount,
+                modelRenderTextures:self.modelRenderTextures,
+                mediumTexture:self.mediumTexture
             )
             
             self.modelRenderFlow = .init(
                 device:device,
-                environment:self.environment,
-                viewCount:1,
-                renderTextures:modelRenderTextures,
-                mediumTexture:mediumTexture,
-                storage:modelStorage
+                environment:environment,
+                viewCount:viewCount,
+                renderTextures:self.modelRenderTextures,
+                mediumTexture:self.mediumTexture,
+                storage:self.modelStorage
             )
                                     
             self.bbRenderFlow = .init( 
                 device:device,
-                environment:self.environment,
-                viewCount:1,
+                environment:environment,
+                viewCount:viewCount,
                 mediumTexture:mediumTexture,
-                storage:bbStorage
+                storage:self.bbStorage
             )
             
             self.planeRenderFlow = .init( 
                 device:device,
-                environment:self.environment,
-                viewCount:1,
-                mediumTexture:mediumTexture,
-                storage:planeStorage
+                environment:environment,
+                viewCount:viewCount,
+                mediumTexture:self.mediumTexture,
+                storage:self.planeStorage
             )
             
             self.sRGBRenderFlow = .init(
                 device:device, 
-                environment:self.environment,
-                viewCount:1,
-                mediumTexture:mediumTexture
+                environment:environment,
+                viewCount:viewCount,
+                mediumTexture:self.mediumTexture
             )
-            
-            self.renderEngine = Lily.Stage.VisionFullyRenderEngine( 
-                layerRenderer,
-                renderFlows:[
-                    clearRenderFlow,
-                    modelRenderFlow,
-                    bbRenderFlow, 
-                    planeRenderFlow, 
-                    sRGBRenderFlow
-                ],
-                buffersInFlight:3
-            )
-            
-            self.renderEngine?.setupHandler = { self.designProc( vc:self ) }
-            self.renderEngine?.updateHandler = { self.updateProc( vc:self ) }
-            
-            self.renderEngine?.startRenderLoop()
         }
     }
 }
