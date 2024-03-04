@@ -24,7 +24,7 @@ extension Lily.Stage.Playground.Plane
         var addRenderer:PlaneAddRenderer?
         var subRenderer:PlaneSubRenderer?
         
-        var planeCompute:PlaneCompute?
+        var comDelta:PlaneComDelta?
     
         public let viewCount:Int
         
@@ -61,7 +61,7 @@ extension Lily.Stage.Playground.Plane
                 viewCount:viewCount
             )
             
-            self.planeCompute = .init(
+            self.comDelta = .init(
                 device: device, 
                 environment: environment
             )
@@ -89,8 +89,10 @@ extension Lily.Stage.Playground.Plane
             
             guard let storage = self.storage else { return }
 
+            // TODO: 最適化したい
             storage.statuses.update { acc, _ in
-                for i in 0 ..< acc.count-1 {
+                // 各オブジェクトのマトリクス計算
+                for i in 0 ..< acc.count - 1 {
                     let TOO_FAR:Float = 999999.0
                     if acc[i].enabled == false || acc[i].state == .trush { continue }
                     
@@ -106,6 +108,7 @@ extension Lily.Stage.Playground.Plane
                     acc[i].matrix = LLMatrix4x4.affine2D( scale:sc, angle:ang, translate:t )
                 }
                 
+                // 親子関係含めた計算
                 let sorted_shapes = PGPool.shared.shapes( on:storage ).sorted { s0, s1 in s0.childDepth <= s1.childDepth }
                 for shape in sorted_shapes {
                     guard let parent = shape.parent else { continue }
@@ -185,7 +188,7 @@ extension Lily.Stage.Playground.Plane
             
             encoder?.endEncoding()
             
-            planeCompute?.updateMatrices(
+            comDelta?.updateMatrices(
                 with:commandBuffer, 
                 globalUniforms: uniforms,
                 storage: storage
