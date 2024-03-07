@@ -23,7 +23,7 @@ extension Lily.Stage.Playground
             self.device = device
            
             let desc = MTLRenderPipelineDescriptor()
-            desc.label = "Playground 2D convert sRGB"
+            desc.label = "Playground convert sRGB"
             
             if environment == .metallib {
                 let library = try! Lily.Stage.metalLibrary( of:device )
@@ -31,14 +31,14 @@ extension Lily.Stage.Playground
                 desc.fragmentShader( .init( device:device, mtllib:library, shaderName:"Lily_Stage_Playground_SRGB_Fs" ) )
             }
             else if environment == .string {
-                let stringShader = Lily.Stage.Playground.SRGBShaderString.shared( device:device )
-                desc.vertexShader( stringShader.sRGBVertexShader )
-                desc.fragmentShader( stringShader.sRGBFragmentShader )            
+                let sMetal = Lily.Stage.Playground.SRGBSMetal.shared( device:device )
+                desc.vertexShader( sMetal.vertexShader )
+                desc.fragmentShader( sMetal.fragmentShader )            
             }
 
-            desc.rasterSampleCount = Lily.Stage.BufferFormats.sampleCount
+            desc.rasterSampleCount = BufferFormats.sampleCount
             
-            desc.colorAttachments[0].pixelFormat = Lily.Stage.BufferFormats.backBuffer
+            desc.colorAttachments[0].pixelFormat = BufferFormats.backBuffer
             if #available( macCatalyst 13.4, * ) {
                 desc.maxVertexAmplificationCount = viewCount
             }

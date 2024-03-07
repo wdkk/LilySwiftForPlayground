@@ -14,13 +14,15 @@ import MetalKit
 extension Lily.Stage.Playground.Billboard
 {
     open class BBRenderFlow
-    : Lily.Stage.BaseRenderFlow
+    : Lily.Stage.Playground.BaseRenderFlow
     {
         var pass:Lily.Stage.Playground.Billboard.BBPass?
         
         weak var mediumTexture:Lily.Stage.Playground.MediumTexture?
         
         public weak var storage:BBStorage?
+        
+        var comDelta:ComDelta?
         
         var alphaRenderer:BBAlphaRenderer?
         var addRenderer:BBAddRenderer?
@@ -60,6 +62,11 @@ extension Lily.Stage.Playground.Billboard
                 viewCount:viewCount
             )
             
+            self.comDelta = .init(
+                device: device, 
+                environment: environment
+            )
+            
             super.init( device:device )
         }
         
@@ -74,7 +81,7 @@ extension Lily.Stage.Playground.Billboard
             viewCount:Int,
             destinationTexture:MTLTexture?,
             depthTexture:MTLTexture?,
-            uniforms:Lily.Metal.RingBuffer<Lily.Stage.Shared.GlobalUniformArray>
+            uniforms:Lily.Metal.RingBuffer<Lily.Stage.Playground.GlobalUniformArray>
         )
         {
             guard let pass = self.pass else { return }
@@ -82,6 +89,37 @@ extension Lily.Stage.Playground.Billboard
             guard let mediumTexture = self.mediumTexture else { LLLog( "mediumTextureが設定されていません" ); return }
             
             guard let storage = self.storage else { return }
+            
+            // TODO: 最適化したい
+            storage.statuses.update { acc, _ in
+                // 各オブジェクトのマトリクス計算
+                for i in 0 ..< acc.count - 1 {
+                    let TOO_FAR:Float = 999999.0
+                    let us = acc[i]
+                    if us.enabled == false || us.state == .trush { continue }
+                    
+                    let enabled_k:Float = us.states[0]
+                    let state_k:Float = us.states[1]
+                    let alpha:Float = acc[i].color[3]
+                    let visibility_z:Float = state_k * enabled_k * alpha > 0.00001 ? 0.0 : TOO_FAR
+                    
+                    let sc = us.scale
+                    let ro = us.rotation
+                    var t = us.position
+                    t.z += visibility_z
+                    
+                    acc[i].matrix = LLMatrix4x4.affine3D( scale:sc, rotate:ro, translate:t )
+                    acc[i].comboAngle = us.angle * 180.0 / .pi
+                }
+                
+                // 親子関係含めた計算
+                let sorted_shapes = BBPool.shared.shapes( on:storage ).sorted { s0, s1 in s0.childDepth <= s1.childDepth }
+                for shape in sorted_shapes {
+                    guard let parent = shape.parent else { continue }
+                    shape.matrix = parent.matrix * shape.matrix
+                    shape.comboAngle = parent.comboAngle + shape.comboAngle 
+                }
+            }
                         
             // 共通処理
             pass.updatePass( 
@@ -142,16 +180,11 @@ extension Lily.Stage.Playground.Billboard
 
             encoder?.endEncoding()
             
-            storage.statuses.update { acc, _ in
-                for i in 0 ..< acc.count-1 {
-                    if acc[i].enabled == false || acc[i].state == .trush { continue }
-                    acc[i].position += acc[i].deltaPosition
-                    acc[i].scale += acc[i].deltaScale
-                    acc[i].rotate += acc[i].deltaRotate
-                    acc[i].color += acc[i].deltaColor
-                    acc[i].life += acc[i].deltaLife
-                }
-            }
+            comDelta?.updateMatrices(
+                with:commandBuffer, 
+                globalUniforms: uniforms,
+                storage: storage
+            )
         }
     }
 }

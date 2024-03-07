@@ -8,12 +8,18 @@
 //   https://opensource.org/licenses/mit-license.php
 //
 
-import Foundation
+#import <metal_stdlib>
+#import <TargetConditionals.h>
 
-extension Lily.Stage.Shared
-{ 
-    public class Const
-    {
-        public static let shadowCascadesCount:Int = 3
-    }
-}
+using namespace metal;
+
+struct SRGBVOut
+{
+    float4 position [[ position ]];
+    uint   ampID;
+};
+    
+struct SRGBFOut
+{
+    float4 backBuffer [[ color(0) ]];
+};

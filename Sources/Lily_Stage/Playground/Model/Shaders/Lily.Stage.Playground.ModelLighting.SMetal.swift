@@ -13,135 +13,37 @@ import simd
 
 extension Lily.Stage.Playground.Model
 {   
-    open class ModelLightingShaderString
+    open class LightingSMetal
     {
-        static var importsCode:String { """
+        static var header:String { """
         #import <metal_stdlib>
         #import <TargetConditionals.h>
         
         using namespace metal;
 
         #import <simd/simd.h>
-
-        //-- Lily.Stage.Shared.CameraUniform.metal --//
-        namespace Lily
-        {
-            namespace Stage 
-            {
-                namespace Shared
-                {
-                    struct CameraUniform
-                    {
-                        simd::float4x4 viewMatrix;
-                        simd::float4x4 projectionMatrix;
-                        simd::float4x4 viewProjectionMatrix;
-                        simd::float4x4 invOrientationProjectionMatrix;
-                        simd::float4x4 invViewProjectionMatrix;
-                        simd::float4x4 invProjectionMatrix;
-                        simd::float4x4 invViewMatrix;
-                        simd::float4   frustumPlanes[6];
-                        simd::float3   position;
-                        simd::float3   up;
-                        simd::float3   right;
-                        simd::float3   direction;
-                    };
-                };
-            };
-        };
         
-        //-- Lily.Stage.Shared.GlobalUniform.metal --//
-        namespace Lily
-        {
-            namespace Stage 
-            {
-                namespace Shared 
-                {
-                    struct GlobalUniform
-                    {
-                        CameraUniform   cameraUniform;
-                        CameraUniform   shadowCameraUniforms[3];
-                        
-                        simd::float2    invScreenSize;
-                        float           aspect;
-                        
-                        simd::float3    sunDirection;
-                        float           projectionYScale;
-                        float           ambientOcclusionContrast;
-                        float           ambientOcclusionScale;
-                        float           ambientLightScale;
-                        
-                        float           frameTime;
-                    };
-                
-                    // Vision用のGlobalUniform
-                    struct GlobalUniformArray
-                    {
-                        GlobalUniform uniforms[2];
-                    };
-                };
-            };
-        };
-        
-        //-- Lily.Stage.MemoryLess.h.metal --//
-        #if ( !TARGET_OS_SIMULATOR || TARGET_OS_MACCATALYST )
-        #define LILY_MEMORY_LESS 1
-        #endif
-
-        #if LILY_MEMORY_LESS
-        #define lily_memory(i)      color(i) 
-        #define lily_memory_float4  float4
-        #define lily_memory_depth   float
-        #else
-        #define lily_memory(i)      texture(i)
-        #define lily_memory_float4  texture2d<float>
-        #define lily_memory_depth   depth2d<float>
-        #endif
+        //-- Lily.Stage.Macro.metal --//
+        \(Lily.Stage.Macro_SMetal)
         
         //-- Lily.Stage.MemoryLess.metal --//
-        namespace Lily
-        {
-            namespace Stage 
-            {
-                namespace MemoryLess
-                {
-                    #if LILY_MEMORY_LESS
-                    float4 float4OfPos( uint2 pos, float4 mem ) { return mem; };
-                    float depthOfPos( uint2 pos, float mem ) { return mem; };
-                    #else
-                    float4 float4OfPos( uint2 pos, texture2d<float> mem ) { return mem.read( pos ); };
-                    float depthOfPos( uint2 pos, depth2d<float> mem ) { return mem.read( pos ); };
-                    #endif
-                };
-            };
-        };
+        \(Lily.Stage.MemoryLess_SMetal)
+        
+        //-- Lily.Stage.MathMatrix.metal --//
+        \(Lily.Stage.MathMatrix_SMetal)
         
         //-- Lily.Stage.Model.Obj.metal --//
+        \(Lily.Stage.Model.Obj_SMetal)
         
-        namespace Lily
-        {
-            namespace Stage 
-            {
-                namespace Model
-                {
-                    namespace Obj
-                    {
-                        struct Vertex
-                        {
-                            simd::float3 position;
-                            simd::float3 normal;
-                            simd::float3 color;
-                        };
-                    };
-                };
-            };
-        };
+        //-- Lily.Stage.CameraUniform.h --//
+        \(Lily.Stage.Playground.CameraUniform_h_SMetal)
         
-        
-        //-- Lily.Stage.Playground.Model.util.metal --//
+        //-- Lily.Stage.GlobalUniform.h --//
+        \(Lily.Stage.Playground.GlobalUniform_h_SMetal)
         
         using namespace Lily::Stage;
-        using namespace Lily::Stage::Shared;
         using namespace Lily::Stage::Model;
+        using namespace Lily::Stage::Playground;
 
         namespace Lily
         {
@@ -201,11 +103,6 @@ extension Lily.Stage.Playground.Model
             };
         };
         
-        """ }
-        
-        static var definesCode:String { """
-        
-        using namespace Lily::Stage::Playground;
         
         static float3 getWorldPositionAndViewDirectionFromDepth
         (
@@ -300,7 +197,7 @@ extension Lily.Stage.Playground.Model
 
         """ }
         
-        static var vertexShaderCode:String { """
+        static var Vs:String { """
         vertex LightingVOut Lily_Stage_Playground_Model_Lighting_Vs
         ( 
          uint vid [[vertex_id]],
@@ -320,7 +217,7 @@ extension Lily.Stage.Playground.Model
         }
         """ }
         
-        static var fragmentShaderCode:String { """
+        static var Fs:String { """
         fragment LightingFOut Lily_Stage_Playground_Model_Lighting_Fs
         (
             LightingVOut             in          [[ stage_in ]],
@@ -399,24 +296,24 @@ extension Lily.Stage.Playground.Model
         public let PlaygroundModelLightingVertexShader:Lily.Metal.Shader
         public let PlaygroundModelLightingFragmentShader:Lily.Metal.Shader
 
-        public static func shared( device:MTLDevice ) -> ModelLightingShaderString {
+        private static var instance:LightingSMetal?
+        public static func shared( device:MTLDevice ) -> LightingSMetal {
             if instance == nil { instance = .init( device:device ) }
             return instance!
         }
-        
-        private static var instance:ModelLightingShaderString?
+
         private init( device:MTLDevice ) {
             LLLog( "文字列からシェーダを生成しています." )
             
             self.PlaygroundModelLightingVertexShader = .init(
                 device:device, 
-                code: Self.importsCode + Self.definesCode + Self.vertexShaderCode,
+                code: Self.header + Self.Vs,
                 shaderName:"Lily_Stage_Playground_Model_Lighting_Vs" 
             )
             
             self.PlaygroundModelLightingFragmentShader = .init(
                 device:device,
-                code: Self.importsCode + Self.definesCode + Self.fragmentShaderCode,
+                code: Self.header + Self.Fs,
                 shaderName:"Lily_Stage_Playground_Model_Lighting_Fs" 
             )
         }

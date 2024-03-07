@@ -13,135 +13,37 @@ import simd
 
 extension Lily.Stage.Playground.Model
 {   
-    open class ModelObjectShaderString
+    open class ObjectSMetal
     {
-        static var importsCode:String { """
+        static var header:String { """
         #import <metal_stdlib>
         #import <TargetConditionals.h>
+        #import <simd/simd.h>
         
         using namespace metal;
-
-        #import <simd/simd.h>
-
-        //-- Lily.Stage.Shared.CameraUniform.metal --//
-        namespace Lily
-        {
-            namespace Stage 
-            {
-                namespace Shared
-                {
-                    struct CameraUniform
-                    {
-                        simd::float4x4 viewMatrix;
-                        simd::float4x4 projectionMatrix;
-                        simd::float4x4 viewProjectionMatrix;
-                        simd::float4x4 invOrientationProjectionMatrix;
-                        simd::float4x4 invViewProjectionMatrix;
-                        simd::float4x4 invProjectionMatrix;
-                        simd::float4x4 invViewMatrix;
-                        simd::float4   frustumPlanes[6];
-                        simd::float3   position;
-                        simd::float3   up;
-                        simd::float3   right;
-                        simd::float3   direction;
-                    };
-                };
-            };
-        };
-        
-        //-- Lily.Stage.Shared.GlobalUniform.metal --//
-        namespace Lily
-        {
-            namespace Stage 
-            {
-                namespace Shared 
-                {
-                    struct GlobalUniform
-                    {
-                        CameraUniform   cameraUniform;
-                        CameraUniform   shadowCameraUniforms[3];
                         
-                        simd::float2    invScreenSize;
-                        float           aspect;
-                        
-                        simd::float3    sunDirection;
-                        float           projectionYScale;
-                        float           ambientOcclusionContrast;
-                        float           ambientOcclusionScale;
-                        float           ambientLightScale;
-                        
-                        float           frameTime;
-                    };
-                
-                    // Vision用のGlobalUniform
-                    struct GlobalUniformArray
-                    {
-                        GlobalUniform uniforms[2];
-                    };
-                };
-            };
-        };
-        
-        //-- Lily.Stage.MemoryLess.h.metal --//
-        #if ( !TARGET_OS_SIMULATOR || TARGET_OS_MACCATALYST )
-        #define LILY_MEMORY_LESS 1
-        #endif
-
-        #if LILY_MEMORY_LESS
-        #define lily_memory(i)      color(i) 
-        #define lily_memory_float4  float4
-        #define lily_memory_depth   float
-        #else
-        #define lily_memory(i)      texture(i)
-        #define lily_memory_float4  texture2d<float>
-        #define lily_memory_depth   depth2d<float>
-        #endif
-        
         //-- Lily.Stage.MemoryLess.metal --//
-        namespace Lily
-        {
-            namespace Stage 
-            {
-                namespace MemoryLess
-                {
-                    #if LILY_MEMORY_LESS
-                    float4 float4OfPos( uint2 pos, float4 mem ) { return mem; };
-                    float depthOfPos( uint2 pos, float mem ) { return mem; };
-                    #else
-                    float4 float4OfPos( uint2 pos, texture2d<float> mem ) { return mem.read( pos ); };
-                    float depthOfPos( uint2 pos, depth2d<float> mem ) { return mem.read( pos ); };
-                    #endif
-                };
-            };
-        };
+        \(Lily.Stage.MemoryLess_SMetal)
+        
+        //-- Lily.Stage.MathMatrix.metal --//
+        \(Lily.Stage.MathMatrix_SMetal)
         
         //-- Lily.Stage.Model.Obj.metal --//
+        \(Lily.Stage.Model.Obj_SMetal)
+
+        //-- Lily.Stage.CameraUniform.h --//
+        \(Lily.Stage.Playground.CameraUniform_h_SMetal)
         
-        namespace Lily
-        {
-            namespace Stage 
-            {
-                namespace Model
-                {
-                    namespace Obj
-                    {
-                        struct Vertex
-                        {
-                            simd::float3 position;
-                            simd::float3 normal;
-                            simd::float3 color;
-                        };
-                    };
-                };
-            };
-        };
+        //-- Lily.Stage.GlobalUniform.h --//
+        \(Lily.Stage.Playground.GlobalUniform_h_SMetal)
         
-        
-        //-- Lily.Stage.Playground.Model.util.metal --//
-        
+        //-- Lily.Stage.Macro.metal --//
+        \(Lily.Stage.Macro_SMetal)
+
+          
         using namespace Lily::Stage;
-        using namespace Lily::Stage::Shared;
         using namespace Lily::Stage::Model;
+        using namespace Lily::Stage::Playground;
 
         namespace Lily
         {
@@ -200,12 +102,7 @@ extension Lily.Stage.Playground.Model
                 };
             };
         };
-        
-        using namespace Lily::Stage::Playground;
-        
-        """ }
-        
-        static var definesCode:String { """
+                
         
         //// マクロ定義 ////
         #define TOO_FAR 999999.0
@@ -236,65 +133,9 @@ extension Lily.Stage.Playground.Model
             float    state;
             int      modelIndex;
         };
-
-        float4x4 rotateZ( float rad ) {
-            return float4x4(
-                float4( cos( rad ), -sin( rad ), 0, 0 ),
-                float4( sin( rad ),  cos( rad ), 0, 0 ),
-                float4( 0, 0, 1, 0 ),
-                float4( 0, 0, 0, 1 )
-            );
-        }  
-
-        float4x4 rotateY( float rad ) {
-            return float4x4(
-               float4( cos( rad ), 0, sin( rad ), 0 ),
-               float4( 0, 1, 0, 0 ),
-               float4( -sin( rad ), 0, cos( rad ), 0 ),
-               float4( 0, 0, 0, 1 )
-            );
-        }
-
-        float4x4 rotateX( float rad ) {
-            return float4x4(
-                float4( 1, 0, 0, 0 ),
-                float4( 0, cos( rad ), -sin( rad ), 0 ),
-                float4( 0, sin( rad ),  cos( rad ), 0 ),
-                float4( 0, 0, 0, 1 )
-            );
-        }
-
-        float4x4 rotate( float3 rad3 ) {
-            auto Rz = rotateZ( rad3.z );
-            auto Ry = rotateY( rad3.y );
-            auto Rx = rotateX( rad3.x );
-            return Rz * Ry * Rx;
-        }
-
-        float4x4 scale( float3 sc ) {
-            return float4x4(
-                float4( sc.x, 0, 0, 0 ),
-                float4( 0, sc.y, 0, 0 ),
-                float4( 0, 0, sc.z, 0 ),
-                float4( 0, 0, 0, 1 )
-            );
-        }
-
-        float4x4 translate( float3 pos ) {
-            return float4x4( 
-                float4( 1, 0, 0, 0 ),
-                float4( 0, 1, 0, 0 ),
-                float4( 0, 0, 1, 0 ),
-                float4( pos, 1 )
-            );
-        }
-
-        float4x4 affineTransform( float3 trans, float3 sc, float3 ro ) {
-            return translate( trans ) * rotate( ro ) * scale( sc );
-        }
         """ }
         
-        static var vertexShaderCode:String { """
+        static var Vs:String { """
         
         vertex ModelVOut Lily_Stage_Playground_Model_Object_Vs
         (
@@ -344,7 +185,7 @@ extension Lily.Stage.Playground.Model
         
         """ }
         
-        static var fragmentShaderCode:String { """
+        static var Fs:String { """
         // フラグメントシェーダ
         fragment GBufferFOut Lily_Stage_Playground_Model_Object_Fs
         (
@@ -366,7 +207,7 @@ extension Lily.Stage.Playground.Model
         """ }
         
         
-        static var shadowVertexShaderCode:String { """
+        static var shadowVs:String { """
         
         vertex ModelVOut Lily_Stage_Playground_Model_Object_Shadow_Vs
         (
@@ -412,34 +253,34 @@ extension Lily.Stage.Playground.Model
         
         """ }
         
-        public let PlaygroundModelVertexShader:Lily.Metal.Shader
-        public let PlaygroundModelFragmentShader:Lily.Metal.Shader
-        public let PlaygroundModelShadowVertexShader:Lily.Metal.Shader
+        public let vertexShader:Lily.Metal.Shader
+        public let fragmentShader:Lily.Metal.Shader
+        public let shadowVertexShader:Lily.Metal.Shader
 
-        public static func shared( device:MTLDevice ) -> ModelObjectShaderString {
+        private static var instance:ObjectSMetal?
+        public static func shared( device:MTLDevice ) -> ObjectSMetal {
             if instance == nil { instance = .init( device:device ) }
             return instance!
         }
         
-        private static var instance:ModelObjectShaderString?
         private init( device:MTLDevice ) {
             LLLog( "文字列からシェーダを生成しています." )
             
-            self.PlaygroundModelVertexShader = .init(
+            self.vertexShader = .init(
                 device:device, 
-                code: Self.importsCode + Self.definesCode + Self.vertexShaderCode,
+                code: Self.header + Self.Vs,
                 shaderName:"Lily_Stage_Playground_Model_Object_Vs" 
             )
             
-            self.PlaygroundModelFragmentShader = .init(
+            self.fragmentShader = .init(
                 device:device,
-                code: Self.importsCode + Self.definesCode + Self.fragmentShaderCode,
+                code: Self.header + Self.Fs,
                 shaderName:"Lily_Stage_Playground_Model_Object_Fs" 
             )
             
-            self.PlaygroundModelShadowVertexShader = .init(
+            self.shadowVertexShader = .init(
                 device:device, 
-                code: Self.importsCode + Self.definesCode + Self.shadowVertexShaderCode,
+                code: Self.header + Self.shadowVs,
                 shaderName:"Lily_Stage_Playground_Model_Object_Shadow_Vs" 
             )
             

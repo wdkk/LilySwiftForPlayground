@@ -31,16 +31,16 @@ extension Lily.Stage.Playground.Billboard
                 desc.fragmentShader( .init( device:device, mtllib:library, shaderName:"Lily_Stage_Playground_Billboard_Fs" ) )
             }
             else if environment == .string {
-                let stringShader = Lily.Stage.Playground.Billboard.BBShaderString.shared( device:device )
-                desc.vertexShader( stringShader.PlaygroundBillboardVertexShader )
-                desc.fragmentShader( stringShader.PlaygroundBillboardFragmentShader )            
+                let sMetal = Lily.Stage.Playground.Billboard.SMetal.shared( device:device )
+                desc.vertexShader( sMetal.vertexShader )
+                desc.fragmentShader( sMetal.fragmentShader )            
             }
             
-            desc.rasterSampleCount = Lily.Stage.BufferFormats.sampleCount
+            desc.rasterSampleCount = Lily.Stage.Playground.BufferFormats.sampleCount
             
-            desc.colorAttachments[0].pixelFormat = Lily.Stage.BufferFormats.linearSRGBBuffer
+            desc.colorAttachments[0].pixelFormat = Lily.Stage.Playground.BufferFormats.linearSRGBBuffer
             desc.colorAttachments[0].composite( type:.alphaBlend )
-            desc.depthAttachmentPixelFormat = Lily.Stage.BufferFormats.depth
+            desc.depthAttachmentPixelFormat = Lily.Stage.Playground.BufferFormats.depth
             if #available( macCatalyst 13.4, * ) {
                 desc.maxVertexAmplificationCount = viewCount
             }
@@ -50,7 +50,7 @@ extension Lily.Stage.Playground.Billboard
         
         public func draw( 
             with renderEncoder:MTLRenderCommandEncoder?,
-            globalUniforms:Lily.Metal.RingBuffer<Lily.Stage.Shared.GlobalUniformArray>?,
+            globalUniforms:Lily.Metal.RingBuffer<Lily.Stage.Playground.GlobalUniformArray>?,
             storage:Lily.Stage.Playground.Billboard.BBStorage
         ) 
         {
@@ -77,7 +77,7 @@ extension Lily.Stage.Playground.Billboard
         
         public func drawTriangle( 
             with renderEncoder:MTLRenderCommandEncoder?,
-            globalUniforms:Lily.Metal.RingBuffer<Lily.Stage.Shared.GlobalUniformArray>?,
+            globalUniforms:Lily.Metal.RingBuffer<Lily.Stage.Playground.GlobalUniformArray>?,
             storage:Lily.Stage.Playground.Billboard.BBStorage
         ) 
         {
