@@ -22,15 +22,15 @@ extension Lily.Stage.Playground.Model
         public func hash(into hasher: inout Hasher) { ObjectIdentifier( self ).hash( into: &hasher ) }
     
         public private(set) var index:Int
-        public private(set) var storage:ModelStorage?
-        public private(set) var statusAccessor:UnsafeMutableBufferPointer<ModelUnitStatus>?
-        public private(set) var currentPointer:UnsafeMutablePointer<ModelUnitStatus>?
+        public private(set) var storage:Storage?
+        public private(set) var statusAccessor:UnsafeMutableBufferPointer<UnitStatus>?
+        public private(set) var currentPointer:UnsafeMutablePointer<UnitStatus>?
                 
         public var iterateField:ModelField<ModelActor, LLEmpty>?
         public var intervalField:ActorInterval?
         public var completionField:ModelField<ModelActor, LLEmpty>?
         
-        public init( storage:ModelStorage?, assetName:String ) {   
+        public init( storage:Storage?, assetName:String ) {   
             self.storage = storage
             
             guard let storage = storage else { 
@@ -59,7 +59,7 @@ extension Lily.Stage.Playground.Model
             return self.index < storage.capacity
         }
         
-        public var status:ModelUnitStatus? {
+        public var status:UnitStatus? {
             get { currentPointer?.pointee }
             set { if let v = newValue { currentPointer?.pointee = v } }
         }
@@ -182,9 +182,9 @@ extension Lily.Stage.Playground.Model.ModelActor
         set { status?.scale = newValue }
     }
     
-    public var rotate:LLFloatv3 {
-        get { return status?.rotate ?? .zero }
-        set { status?.rotate = newValue }
+    public var rotation:LLFloatv3 {
+        get { return status?.rotation ?? .zero }
+        set { status?.rotation = newValue }
     }
     
     public var enabled:Bool { 
@@ -222,9 +222,9 @@ extension Lily.Stage.Playground.Model.ModelActor
         set { status?.deltaColor = newValue.floatv4 }
     }
         
-    public var deltaRotate:LLFloatv3 {
-        get { return status?.deltaRotate ?? .zero }
-        set { status?.deltaRotate = newValue }
+    public var deltaRotation:LLFloatv3 {
+        get { return status?.deltaRotation ?? .zero }
+        set { status?.deltaRotation = newValue }
     }
     
     public var deltaLife:Float {
@@ -326,14 +326,14 @@ extension Lily.Stage.Playground.Model.ModelActor
     }
 
     @discardableResult
-    public func rotate( _ ro:LLFloatv3 ) -> Self {
-        status?.rotate = ro
+    public func rotation( _ ro:LLFloatv3 ) -> Self {
+        status?.rotation = ro
         return self
     }
     
     @discardableResult
-    public func rotate( rx:Float, ry:Float, rz:Float ) -> Self {
-        status?.rotate = .init( rx, ry, rz )
+    public func rotation( rx:Float, ry:Float, rz:Float ) -> Self {
+        status?.rotation = .init( rx, ry, rz )
         return self
     }
     
@@ -468,14 +468,14 @@ extension Lily.Stage.Playground.Model.ModelActor
     }
 
     @discardableResult
-    public func deltaRotate( _ ang:LLFloatv3 ) -> Self {
-        status?.deltaRotate = ang
+    public func deltaRotation( _ ang:LLFloatv3 ) -> Self {
+        status?.deltaRotation = ang
         return self
     }
     
     @discardableResult
-    public func deltaRotate( rx:Float, ry:Float, rz:Float ) -> Self {
-        status?.deltaRotate = .init( rx, ry, rz )
+    public func deltaRotation( rx:Float, ry:Float, rz:Float ) -> Self {
+        status?.deltaRotation = .init( rx, ry, rz )
         return self
     }
     
