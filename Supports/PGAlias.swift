@@ -11,6 +11,7 @@
 // LilySwift利用時のサポート(Playgroundリポジトリになるときは置き換わる)
 import LilySwiftForPlayground
 
+
 public typealias PG = Lily.Stage.Playground
 public typealias PGScreen = PG.PGScreen
 public typealias PGScreenView = PG.PGScreenView
