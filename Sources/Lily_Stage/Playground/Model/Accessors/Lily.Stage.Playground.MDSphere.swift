@@ -12,11 +12,11 @@ import Metal
 
 extension Lily.Stage.Playground.Model
 {
-    public class ModelObj : ModelActor
+    public class MDSphere : MDActor
     {
         @discardableResult
-        public override init( storage:ModelStorage? = ModelStorage.current, assetName:String ) {
-            super.init( storage:storage, assetName:assetName )
+        public init( storage:ModelStorage? = ModelStorage.current ) {
+            super.init( storage:storage, assetName:"sphere" )
         }
     }
 }
