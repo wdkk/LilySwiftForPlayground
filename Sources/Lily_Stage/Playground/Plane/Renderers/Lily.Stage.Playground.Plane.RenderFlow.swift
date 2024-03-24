@@ -44,21 +44,27 @@ extension Lily.Stage.Playground.Plane
             self.mediumTexture = mediumTexture
             self.storage = storage
             
+            PGShader.shared.ready( device:device )
+            let funcs = PGShader.shared.functions
+            
             // レンダラーの作成
             self.alphaRenderer = .init( 
                 device:device,
                 environment:environment,
-                viewCount:viewCount
+                viewCount:viewCount,
+                pgFunctions:funcs
             )
             self.addRenderer = .init( 
                 device:device,
                 environment:environment,
-                viewCount:viewCount
+                viewCount:viewCount,
+                pgFunctions:funcs
             )
             self.subRenderer = .init( 
                 device:device,
                 environment:environment,
-                viewCount:viewCount
+                viewCount:viewCount,
+                pgFunctions:funcs
             )
             
             self.comDelta = .init(

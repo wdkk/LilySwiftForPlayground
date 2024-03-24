@@ -23,6 +23,7 @@ public typealias PGVisionScene = PG.PGVisionScene
 #endif
 
 public typealias PlaneStorage = PG.Plane.PlaneStorage
+public typealias PGShader = PG.Plane.PGShader
 public typealias PGActor = PG.Plane.PGActor
 public typealias PGEmpty = PG.Plane.PGEmpty
 public typealias PGRectangle = PG.Plane.PGRectangle
@@ -43,8 +44,15 @@ public typealias PGSubPicture = PG.Plane.PGSubPicture
 public typealias PGMask = PG.Plane.PGMask
 public typealias PGAddMask = PG.Plane.PGAddMask
 public typealias PGSubMask = PG.Plane.PGSubMask
+public typealias PGShaderRectangle = PG.Plane.PGShaderRectangle
+public typealias PGAddShaderRectangle = PG.Plane.PGAddShaderRectangle
+public typealias PGSubShaderRectangle = PG.Plane.PGSubShaderRectangle
+public typealias PGShaderTriangle = PG.Plane.PGShaderTriangle
+public typealias PGAddShaderTriangle = PG.Plane.PGAddShaderTriangle
+public typealias PGSubShaderTriangle = PG.Plane.PGSubShaderTriangle
 
 public typealias BBStorage = PG.Billboard.BBStorage
+public typealias BBShader = PG.Billboard.BBShader
 public typealias BBPool = PG.Billboard.BBPool
 public typealias BBActor = PG.Billboard.BBActor
 public typealias BBEmpty = PG.Billboard.BBEmpty
@@ -66,6 +74,12 @@ public typealias BBSubPicture = PG.Billboard.BBSubPicture
 public typealias BBMask = PG.Billboard.BBMask
 public typealias BBAddMask = PG.Billboard.BBAddMask
 public typealias BBSubMask = PG.Billboard.BBSubMask
+public typealias BBShaderRectangle = PG.Billboard.BBShaderRectangle
+public typealias BBAddShaderRectangle = PG.Billboard.BBAddShaderRectangle
+public typealias BBSubShaderRectangle = PG.Billboard.BBSubShaderRectangle
+public typealias BBShaderTriangle = PG.Billboard.BBShaderTriangle
+public typealias BBAddShaderTriangle = PG.Billboard.BBAddShaderTriangle
+public typealias BBSubShaderTriangle = PG.Billboard.BBSubShaderTriangle
 
 public typealias ModelStorage = PG.Model.ModelStorage
 public typealias MDObj = PG.Model.MDObj
