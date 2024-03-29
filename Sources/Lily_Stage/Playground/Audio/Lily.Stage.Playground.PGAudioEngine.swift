@@ -8,6 +8,11 @@
 //   https://opensource.org/licenses/mit-license.php
 //
 
+#if os(macOS)
+import AppKit
+#else
+import UIKit
+#endif
 import AVFoundation
 
 extension Lily.Stage.Playground
@@ -37,17 +42,16 @@ extension Lily.Stage.Playground
         public func stop() { player.stop() }
     }
     
-    open class PGAudio
+    open class PGAudioEngine
     {
-        public static let shared = PGAudio()
-        private init() {}
-    
         lazy var engine = AVAudioEngine()
-        public lazy var flows  = [PGAudioFlow]()
+        public lazy var flows = [PGAudioFlow]()
         
-        public func setup() {
-            flows = .init( repeating:.init( engine:engine ), count:4 )
-                        
+        public var channelCount:Int { flows.count }
+        
+        public func setup( channels:Int ) {
+            for i in 0 ..< channels { flows.append( .init( engine:engine ) ) }
+            
             for i in 0 ..< flows.count {
                 let flow = flows[i]
                 engine.connect( 
@@ -70,39 +74,38 @@ extension Lily.Stage.Playground
         
         public func start() {
             if engine.isRunning { return }
-            
-            do {
-                try engine.start()
-            }
-            catch {
-                LLLog( "AudioEngineを開始できませんでした: \(error)")
-            }
+            do { try engine.start() }
+            catch { LLLog( "AudioEngineを開始できませんでした: \(error)") }
         }
         
         public func stop() {
+            if !engine.isRunning { return }
             engine.stop()
         }
-    
-        private func load( bundleName:String ) -> AVAudioFile? {
-            guard let file = Bundle.main.url(forResource: bundleName, withExtension: nil)
-            else {
-                LLLog( "\(bundleName)がバンドルにありません" )
-                return nil
-            }
             
-            do {
-                return try AVAudioFile(forReading: file)
-            } 
-            catch {
-                LLLog( "\(bundleName)がバンドルから読み込めませんでした: \(error)" )
-                return nil
+        public func setAudio( bundleName:String, index:Int ) {
+            guard let audioFile = AVAudioFile.load( bundleName:bundleName ) else { 
+                LLLog( "\(bundleName) のオーディオ生成に失敗しました" )
+                return
             }
+            flows[index].set( audioFile:audioFile )
         }
         
-        public func setAudio( bundleName:String, index:Int ) {
-            let audioFile = load( bundleName:bundleName )
-            flows[index].set( audioFile:audioFile! )
+        public func setAudio( assetName:String, index:Int ) {
+            guard let audioFile = AVAudioFile.load( assetName:assetName ) else {
+                LLLog( "\(assetName) のオーディオ生成に失敗しました" )
+                return
+            }
+            flows[index].set( audioFile:audioFile )
         }
+        
+        public func setAudio( audioFile:AVAudioFile?, index:Int ) {
+            guard let audioFile = audioFile else {
+                LLLog( "\(index) に指定したオーディオの生成に失敗しました" )
+                return
+            }
+            flows[index].set( audioFile:audioFile )
+        }        
         
         public func play( index:Int ) {
             if index < flows.count { flows[index].play() }
@@ -114,6 +117,21 @@ extension Lily.Stage.Playground
         
         public func stop( index:Int ) {
             if index < flows.count { flows[index].stop() }
+        }
+        
+        public func clear() {
+            Task {
+                let fade_time:Float = 1.0
+                var vol = engine.mainMixerNode.outputVolume
+                let d_vol = vol / 1000.0 / fade_time
+                while true {
+                    if vol <= 0.0 { break } 
+                    vol -= d_vol
+                    engine.mainMixerNode.outputVolume = vol
+                    LLSystem.sleep(1)
+                }
+                engine.stop()
+            }
         }
     }
 }
