@@ -21,71 +21,60 @@ extension Lily.Stage.Playground
     {
         public static func == ( lhs:PGSound, rhs:PGSound ) -> Bool { lhs === rhs }
         public func hash(into hasher: inout Hasher) { ObjectIdentifier( self ).hash( into: &hasher ) }
-    
-        public static var soundMap:[String:PGSound] = [:]
-        public static subscript( name:String ) -> PGSound? { 
-            get{ Self.soundMap[name] }
-            set{ Self.soundMap[name] = newValue }
-        }
-        
+            
         public let storage:PGAudioStorage?
-        public private(set) var audioIndex:Int
-        public let name:String
+        public private(set) var channel:Int = -1
         
         public var iterateField:PGField<PGSound, LLEmpty>?
         
         @discardableResult
-        public init( storage:PGAudioStorage? = .current, name:String, assetName:String ) {
+        public init( 
+            storage:PGAudioStorage? = .current,
+            channel:Int
+        )
+        {
             self.storage = storage
-            self.name = name
-            if let s = PGSound[name] {
-                self.audioIndex = storage?.request( overwriteIndex:s.audioIndex, assetName:assetName ) ?? -1
-            }
-            else {
-                self.audioIndex = storage?.request( assetName:assetName ) ?? -1
-            }
-            
-            PGSound[name] = self
-            
+            self.channel = channel
             PGAudioPool.shared.insert( sound:self, to:storage )
         }
         
         private var flow:PGAudioFlow? {
-            if audioIndex == -1 { return nil }
+            if channel == -1 { return nil }
             guard let storage = storage else { return nil }
             let flows = storage.engine.flows
-            if flows.count <= audioIndex { return nil }
-            return flows[audioIndex]
+            if flows.count <= channel { return nil }
+            return flows[channel]
         }
         
-        public func play() {
-            flow?.play()
+        public func set(
+            assetName:String,
+            startTime:Double? = nil,
+            endTime:Double? = nil
+        ) -> Self
+        {
+            self.channel = storage?.request(
+                channel:channel,
+                assetName:assetName,
+                startTime:startTime,
+                endTime:endTime
+            ) ?? -1
+            
+            return self
         }
         
-        public func pause() {
-            flow?.pause()
-        }
+        public func play() { flow?.play() }
         
-        public func stop() {
-            flow?.stop()
-            trush()
-        }
+        public func pause() { flow?.pause() }
+        
+        public func stop() { flow?.stop() }
         
         public func trush() {
-            storage?.trush( index:audioIndex )
+            storage?.trush( index:channel )
             iterateField = nil
             PGAudioPool.shared.remove( sound:self, to:storage )
         }
         
         ////
-        
-        public var volume:Float { flow?.volume ?? 0.0 }
-        
-        @discardableResult
-        public func volume( _ v:Float ) -> Self {
-            flow?.volume( v )
-            return self
-        }        
         
         @discardableResult
         public func iterate( _ f:@escaping ( PGSound )->Void ) -> Self {
@@ -96,5 +85,45 @@ extension Lily.Stage.Playground
         public func appearIterate() {
             self.iterateField?.appear()
         }
+        
+        ////
+        
+        public var isRepeating:Bool { flow?.isRepeating ?? false }
+        
+        @discardableResult
+        public func `repeat`( _ v:Bool ) -> Self {
+            flow?.repeat( v )
+            return self
+        }    
+        
+        public var volume:Float { flow?.volume ?? 0.0 }
+        
+        @discardableResult
+        public func volume( _ v:Float ) -> Self {
+            flow?.volume = v
+            return self
+        }        
+        
+        public var pan:Float { flow?.pan ?? 0.0 }
+        
+        @discardableResult
+        public func pan( _ v:Float ) -> Self {
+            flow?.pan = v
+            return self
+        }   
+        
+        public var position:AVAudio3DPoint { flow?.position ?? .init() }
+        
+        @discardableResult
+        public func position( _ pos:AVAudio3DPoint ) -> Self {
+            flow?.position = pos
+            return self
+        } 
+
+        @discardableResult
+        public func position( x:Float, y:Float, z:Float ) -> Self {
+            flow?.position = .init( x:x, y:y, z:z )
+            return self
+        }         
     }
 }

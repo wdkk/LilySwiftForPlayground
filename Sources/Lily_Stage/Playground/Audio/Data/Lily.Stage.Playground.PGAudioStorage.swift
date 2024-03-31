@@ -25,11 +25,10 @@ extension Lily.Stage.Playground
         public static var current:PGAudioStorage?
         
         public var engine:PGAudioEngine
-        public var reuseIndice:[Int]
         public let channels:Int
         
         public var audios:[String:AVAudioFile] = [:]
-        
+                
         public init( assetNames:[String] ) {
             self.channels = 8
             
@@ -37,45 +36,38 @@ extension Lily.Stage.Playground
             engine.setup( channels:channels )
             engine.start()
             
-            reuseIndice = (0..<channels).map { $0 }.reversed()
-            
             assetNames.forEach { audios[$0] = AVAudioFile.load( assetName:$0 ) }
         }
         
         deinit { engine.clear() }
         
-        public func request( assetName:String ) -> Int {
-            guard let idx = reuseIndice.popLast() else { 
-                LLLogWarning( "サウンドチャンネルの空きがありません" )
-                return channels
+        public func request( 
+            channel:Int,
+            assetName:String,
+            startTime:Double? = nil,
+            endTime:Double? = nil
+        ) 
+        -> Int
+        {
+            if channel >= engine.flows.count { 
+                LLLogWarning( "サウンドチャンネルがありません: \(channel)" )
+                return -1
             }
             
             guard let audio = audios[assetName] else {
-                LLLogWarning( "\(assetName): Assetにオーディオデータがありません" )
-                return channels
+                LLLogWarning( "Assetにオーディオデータがありません: \(assetName)" )
+                return -1
             }
+         
+            engine.flows[channel].repeat( false )
+            engine.flows[channel].stop()
+            engine.flows[channel].set( audioFile:audio, from:startTime, to:endTime )
             
-            engine.flows[idx].stop()
-            engine.flows[idx].set( audioFile:audio )
-           
-            return idx
-        }
-        
-        public func request( overwriteIndex idx:Int, assetName:String ) -> Int {
-            guard let audio = audios[assetName] else {
-                LLLogWarning( "\(assetName): オーディオデータがありません" )
-                return idx
-            }
-                
-            engine.flows[idx].stop()
-            engine.flows[idx].set( audioFile:audio )
-           
-            return idx
+            return channel
         }
         
         public func trush( index idx:Int ) {
             engine.flows[idx].stop()
-            reuseIndice.append( idx )
         }
     }
 }
