@@ -76,6 +76,33 @@ extension Lily.Stage.Playground
             return self
         }
         
+        public func set(
+            systemSound:String,
+            startTime:Double? = nil,
+            endTime:Double? = nil
+        ) 
+        -> Self
+        {
+            if let flow = flow, flow.player.isPlaying {
+                // 同じチャンネルのものが動作中の場合completionを呼ぶ
+                self.appearCompletion()
+                self.trush()
+            }
+            
+            self.channel = storage?.request(
+                channel:channel,
+                systemSound:systemSound,
+                startTime:startTime,
+                endTime:endTime,
+                completion: { [weak self] in
+                    self?.appearCompletion()
+                    self?.trush()
+                }
+            ) ?? -1
+                        
+            return self
+        }
+        
         public func play() { flow?.play() }
         
         public func pause() { flow?.pause() }

@@ -29,6 +29,11 @@ extension Lily.Stage.Playground
         
         public var channelCount:Int { flows.count }
         
+        public var volume:Float { 
+            get { engine.mainMixerNode.outputVolume }
+            set { engine.mainMixerNode.outputVolume = newValue }
+        }
+        
         public func setup( channels:Int ) {
             for _ in 0 ..< channels { flows.append( .init( engine:engine ) ) }
             
@@ -59,7 +64,7 @@ extension Lily.Stage.Playground
                 to: engine.outputNode,
                 format: output_format
             )
-            
+      
             engine.prepare()
         }
         
