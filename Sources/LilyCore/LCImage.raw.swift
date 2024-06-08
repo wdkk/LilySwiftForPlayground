@@ -139,8 +139,8 @@ public class LCImageGenericRaw<TColor> : LCImageRaw
         let img_dst = Self( wid, hgt )
         img_dst.setScale( self.scale )
         
-        let mat_src:UnsafeMutablePointer<UnsafeMutablePointer<TColor>> = self.getMatrix()!
-        let mat_dst:UnsafeMutablePointer<UnsafeMutablePointer<TColor>> = img_dst.getMatrix()!
+        let mat_src = self.getMatrix()!
+        let mat_dst = img_dst.getMatrix()!
         
         let funcFrom:(TColor)->LLColor = self.requestFunctionOfConvertRawColorFrom()!
         let funcTo:(LLColor)->TColor = img_dst.requestFunctionOfConvertRawColorTo()!
@@ -174,7 +174,9 @@ public class LCImageGenericRaw<TColor> : LCImageRaw
             let funcTo:LCImageRGBA8.ConvertToFunc = img_dst.requestFunctionOfConvertRawColorTo()!
             for y:Int in 0 ..< hgt {
                 for x:Int in 0 ..< wid {
-                    mat_dst[y][x] = funcTo( funcFrom( mat_src[y][x] ) )
+                    let src = mat_src[y][x]
+                    let medium = funcFrom( src )
+                    mat_dst[y][x] = funcTo( medium )
                 }
             }
             return img_dst
@@ -185,7 +187,9 @@ public class LCImageGenericRaw<TColor> : LCImageRaw
             let funcTo:LCImageRGBA16.ConvertToFunc = img_dst.requestFunctionOfConvertRawColorTo()!
             for y:Int in 0 ..< hgt {
                 for x:Int in 0 ..< wid {
-                    mat_dst[y][x] = funcTo( funcFrom( mat_src[y][x] ) )
+                    let src = mat_src[y][x]
+                    let medium = funcFrom( src )
+                    mat_dst[y][x] = funcTo( medium )
                 }
             }
             return img_dst
@@ -196,7 +200,9 @@ public class LCImageGenericRaw<TColor> : LCImageRaw
             let funcTo:LCImageRGBAf.ConvertToFunc = img_dst.requestFunctionOfConvertRawColorTo()!
             for y:Int in 0 ..< hgt {
                 for x:Int in 0 ..< wid {
-                    mat_dst[y][x] = funcTo( funcFrom( mat_src[y][x] ) )
+                    let src = mat_src[y][x]
+                    let medium = funcFrom( src )
+                    mat_dst[y][x] = funcTo( medium )
                 }
             }
             return img_dst
@@ -207,7 +213,9 @@ public class LCImageGenericRaw<TColor> : LCImageRaw
             let funcTo:LCImageGrey8.ConvertToFunc = img_dst.requestFunctionOfConvertRawColorTo()!
             for y:Int in 0 ..< hgt {
                 for x:Int in 0 ..< wid {
-                    mat_dst[y][x] = funcTo( funcFrom( mat_src[y][x] ) )
+                    let src = mat_src[y][x]
+                    let medium = funcFrom( src )
+                    mat_dst[y][x] = funcTo( medium )
                 }
             }
             return img_dst
@@ -218,7 +226,9 @@ public class LCImageGenericRaw<TColor> : LCImageRaw
             let funcTo:LCImageGrey16.ConvertToFunc = img_dst.requestFunctionOfConvertRawColorTo()!
             for y:Int in 0 ..< hgt {
                 for x:Int in 0 ..< wid {
-                    mat_dst[y][x] = funcTo( funcFrom( mat_src[y][x] ) )
+                    let src = mat_src[y][x]
+                    let medium = funcFrom( src )
+                    mat_dst[y][x] = funcTo( medium )
                 }
             }
             return img_dst
@@ -229,7 +239,9 @@ public class LCImageGenericRaw<TColor> : LCImageRaw
             let funcTo:LCImageGreyf.ConvertToFunc = img_dst.requestFunctionOfConvertRawColorTo()!
             for y:Int in 0 ..< hgt {
                 for x:Int in 0 ..< wid {
-                    mat_dst[y][x] = funcTo( funcFrom( mat_src[y][x] ) )
+                    let src = mat_src[y][x]
+                    let medium = funcFrom( src )
+                    mat_dst[y][x] = funcTo( medium )
                 }
             }
             return img_dst
@@ -256,6 +268,7 @@ public class LCImageGenericRaw<TColor> : LCImageRaw
         self.row_bytes = row_bytes
         self.memory_length = Self.requestAlignedMemoryLength( self.row_bytes * hgt, 4096 )
         self.memory = UnsafeMutablePointer<LLUInt8>.allocate( capacity: self.memory_length )
+        memset( self.memory, 0, self.memory_length )
         self.scale = 1.0
 
         // 縦方向マトリクスのメモリ確保
