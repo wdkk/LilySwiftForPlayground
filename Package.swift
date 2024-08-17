@@ -16,14 +16,14 @@ let package = Package(
         .library(
             name: "LilySwiftForPlayground",
             targets: [
-                "LilySwiftMain",
+                "LilySwiftForPlayground",
                 "LilySwiftAlias"
             ]
         )
     ],
     targets: [
         .target(
-            name: "LilySwiftMain",
+            name: "LilySwiftForPlayground",
             dependencies: [],
             path: "./Sources/",
             swiftSettings: [
@@ -32,7 +32,7 @@ let package = Package(
         ),
         .target(
             name: "LilySwiftAlias",
-            dependencies: [ "LilySwiftForMain" ],
+            dependencies: [ "LilySwiftForPlayground" ],
             path: "./Aliases/",
             swiftSettings: [
                 .define( "DEBUG", .when( platforms:[.iOS, .macOS, .macCatalyst, .visionOS], configuration:.debug ) )
