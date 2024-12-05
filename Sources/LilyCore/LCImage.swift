@@ -56,10 +56,12 @@ public func LCImageMake( _ wid_:Int, _ hgt_:Int, _ type_:LLImageType ) -> LCImag
     return lcimg
 }
 
+@MainActor
 public func LCImageMakeWithFile( _ file_path_:LCStringSmPtr ) -> LCImageSmPtr {
     return LDImageLoadFileWithOption( file_path_, LLImageLoadOptionDefault() )
 }
 
+@MainActor
 public func LCImageMakeWithFileAndOption( _ file_path_:LCStringSmPtr, _ option_:LLImageLoadOption ) -> LCImageSmPtr {
     return LDImageLoadFileWithOption( file_path_, option_ )
 }
@@ -367,7 +369,7 @@ public func LCImage2NSImage( _ img_:LCImageSmPtr ) -> NSImage {
 public func NSImage2LCImage( _ img_:NSImage ) -> LCImageSmPtr {
     let wid = img_.size.width.i!
     let hgt = img_.size.height.i!
-    var nsimage_rect:CGRect = CGRect( 0, 0, wid, hgt )
+    let nsimage_rect:CGRect = CGRect( 0, 0, wid, hgt )
     
     let color_space = CGColorSpaceCreateDeviceRGB()
 

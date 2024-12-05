@@ -23,7 +23,7 @@ extension Lily.Stage.Playground.sRGB
         
         var pipeline: MTLRenderPipelineState!
         
-        public init( device:MTLDevice, environment:Lily.Stage.ShaderEnvironment, viewCount:Int ) {
+        public init( device:MTLDevice, environment:Lily.Metal.ShaderEnvironment, viewCount:Int ) {
             self.device = device
            
             let desc = MTLRenderPipelineDescriptor()
@@ -52,12 +52,12 @@ extension Lily.Stage.Playground.sRGB
         
         public func draw( 
             with renderEncoder:MTLRenderCommandEncoder?,
-            mediumTexture:Lily.Stage.Playground.MediumTexture
+            mediumResource:Lily.Stage.Playground.MediumResource
         ) 
         {
             renderEncoder?.setRenderPipelineState( pipeline )
                     
-            renderEncoder?.setFragmentTexture( mediumTexture.resultTexture, index:0 )
+            renderEncoder?.setFragmentTexture( mediumResource.resultTexture, index:0 )
             renderEncoder?.drawPrimitives( type:.triangle, vertexStart:0, vertexCount:3 )
         }
     }

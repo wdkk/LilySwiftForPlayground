@@ -22,7 +22,7 @@ extension Lily.Stage.Playground
             self.device = device
         }
         
-        // TODO: おいおいプロトコルにしたい
+        @MainActor
         open func changeSize( scaledSize:CGSize ) { }
         
         open func render(
@@ -32,7 +32,7 @@ extension Lily.Stage.Playground
             viewCount:Int,
             destinationTexture:MTLTexture?,
             depthTexture:MTLTexture?,
-            uniforms:Lily.Metal.RingBuffer<Lily.Stage.Playground.GlobalUniformArray>
+            uniforms:Lily.Metal.RingBuffer<GlobalUniformArray>
         )
         {
             LLLog( "overrideしてください" )

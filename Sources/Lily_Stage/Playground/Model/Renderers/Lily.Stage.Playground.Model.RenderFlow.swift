@@ -18,7 +18,7 @@ extension Lily.Stage.Playground.Model
     : Lily.Stage.Playground.BaseRenderFlow
     {
         weak var modelRenderTextures:RenderTextures?
-        weak var mediumTexture:Lily.Stage.Playground.MediumTexture?
+        weak var mediumResource:Lily.Stage.Playground.MediumResource?
         
         public var modelPass:Pass?
         
@@ -33,15 +33,15 @@ extension Lily.Stage.Playground.Model
         
         public init(
             device:MTLDevice,
-            environment:Lily.Stage.ShaderEnvironment,
+            environment:Lily.Metal.ShaderEnvironment,
             viewCount:Int,
             renderTextures:RenderTextures,
-            mediumTexture:Lily.Stage.Playground.MediumTexture,
+            mediumResource:Lily.Stage.Playground.MediumResource,
             storage:ModelStorage?
         ) 
         {
             self.modelRenderTextures = renderTextures
-            self.mediumTexture = mediumTexture
+            self.mediumResource = mediumResource
             
             self.modelPass = .init( device:device, renderTextures:renderTextures )
             
@@ -86,7 +86,7 @@ extension Lily.Stage.Playground.Model
 
             guard let modelRenderTextures = self.modelRenderTextures else { LLLog( "modelRenderTextureが設定されていません" ); return }
             
-            guard let mediumTexture = self.mediumTexture else { LLLog( "mediumTextureが設定されていません" ); return }
+            guard let mediumResource = self.mediumResource else { LLLog( "mediumResourceが設定されていません" ); return }
             
             guard let storage = self.storage else { return }
             
@@ -98,7 +98,7 @@ extension Lily.Stage.Playground.Model
             modelPass.updatePass( 
                 renderTextures:modelRenderTextures,
                 rasterizationRateMap:rasterizationRateMap,
-                renderTargetCount:viewCount
+                renderTargetViewIndex:viewCount
             )
             
             // カスケードシャドウマップ
@@ -135,7 +135,7 @@ extension Lily.Stage.Playground.Model
             }
             
             // レンダーパスの書き込み先を指定
-            modelPass.setGBufferDestination( texture:mediumTexture.resultTexture )
+            modelPass.setGBufferDestination( texture:mediumResource.resultTexture )
             modelPass.setDepth( texture:depthTexture )
             
             let deferred_shading_encoder = commandBuffer.makeRenderCommandEncoder( descriptor:modelPass.GBufferPassDesc! )
@@ -145,7 +145,7 @@ extension Lily.Stage.Playground.Model
             .cullMode( .front )
             .depthStencilState( modelPass.GBufferDepthState! )
             .viewports( viewports )
-            .vertexAmplification( count:viewCount, viewports:viewports )
+            .vertexAmplification( viewports:viewports )
             
             // オブジェクトの描画
             meshRenderer?.draw( 

@@ -29,17 +29,17 @@ extension Lily.Stage.Playground
         // MARK: システム
         var device:MTLDevice        
         public var renderEngine:StandardRenderEngine
-        public private(set) var environment:Lily.Stage.ShaderEnvironment
+        public private(set) var environment:Lily.Metal.ShaderEnvironment
         
         // MARK: 描画テクスチャ
         public var modelRenderTextures:Model.RenderTextures
-        public var mediumTexture:MediumTexture
+        public var mediumResource:MediumResource
         
         // MARK: ストレージ
-        public var planeStorage:Plane.PlaneStorage?
-        public var modelStorage:Model.ModelStorage?
-        public var bbStorage:Billboard.BBStorage?
-        public var audioStorage:PGAudioStorage?
+        nonisolated(unsafe) public var planeStorage:Plane.PlaneStorage?
+        nonisolated(unsafe) public var modelStorage:Model.ModelStorage?
+        nonisolated(unsafe) public var bbStorage:Billboard.BBStorage?
+        nonisolated(unsafe) public var audioStorage:PGAudioStorage?
         
         // MARK: レンダーフロー
         public var clearRenderFlow:ClearRenderFlow?
@@ -91,12 +91,11 @@ extension Lily.Stage.Playground
         public var randomPoint:LLPoint { coordRegion.randomPoint }
         
         // MARK: - 外部処理ハンドラ
-        public var pgReadyHandler:(( PGScreen )->Void)?
-        public var pgDesignHandler:(( PGScreen )->Void)?
-        public var pgUpdateHandler:(( PGScreen )->Void)?
-        public var pgResizeHandler:(( PGScreen )->Void)?
+        nonisolated(unsafe) public var pgReadyHandler:(( PGScreen )->Void)?
+        nonisolated(unsafe) public var pgDesignHandler:(( PGScreen )->Void)?
+        nonisolated(unsafe) public var pgUpdateHandler:(( PGScreen )->Void)?
+        nonisolated(unsafe) public var pgResizeHandler:(( PGScreen )->Void)?
        
-
         public var _design_mutex = Lily.View.RecursiveMutex()
         private var _design_once = false        
         public func alreadySetupDesignOnce() -> Bool { _design_once }
@@ -141,25 +140,25 @@ extension Lily.Stage.Playground
         }        
         #if os(macOS)
         .mouseLeftDown( caller:self ) { me, caller, args in
-            caller.recogizeMouse( pos:args.position, phase:.began, event:args.event )
+            caller.recognizeMouse( pos:args.position, phase:.began, event:args.event )
         }
         .mouseLeftDragged( caller:self ) { me, caller, args in
-            caller.recogizeMouse( pos:args.position, phase:.moved, event:args.event )
+            caller.recognizeMouse( pos:args.position, phase:.moved, event:args.event )
         }
         .mouseLeftUp( caller:self ) { me, caller, args in
-            caller.recogizeMouse( pos:args.position, phase:.ended, event:args.event )
+            caller.recognizeMouse( pos:args.position, phase:.ended, event:args.event )
         }
         #else
         .touchesBegan( caller:self ) { me, vc, args in
             vc.touchManager.allTouches.removeAll()
             args.event?.allTouches?.forEach { vc.touchManager.allTouches.append( $0 ) }
-            vc.recogizeTouches( touches:vc.touchManager.allTouches )
+            vc.recognizeTouches( touches:vc.touchManager.allTouches )
         }
         .touchesMoved( caller:self ) { me, vc, args in
-            vc.recogizeTouches( touches:vc.touchManager.allTouches )
+            vc.recognizeTouches( touches:vc.touchManager.allTouches )
         }
         .touchesEnded( caller:self ) { me, vc, args in
-            vc.recogizeTouches( touches:vc.touchManager.allTouches )
+            vc.recognizeTouches( touches:vc.touchManager.allTouches )
             
             for i in (0 ..< vc.touchManager.allTouches.count).reversed() {
                 args.event?.allTouches?
@@ -168,14 +167,14 @@ extension Lily.Stage.Playground
             }
         }
         .touchesCancelled( caller:self ) { me, vc, args in
-            vc.recogizeTouches( touches:vc.touchManager.allTouches )
+            vc.recognizeTouches( touches:vc.touchManager.allTouches )
         }
         #endif
         
         
         public init( 
             device:MTLDevice, 
-            environment:Lily.Stage.ShaderEnvironment = .metallib,
+            environment:Lily.Metal.ShaderEnvironment = .metallib,
             planeStorage:Plane.PlaneStorage? = nil,
             bbStorage:Billboard.BBStorage? = nil,
             modelStorage:Model.ModelStorage? = nil,
@@ -186,7 +185,7 @@ extension Lily.Stage.Playground
             self.environment = environment
 
             self.modelRenderTextures = .init( device:device )            
-            self.mediumTexture = .init( device:device )
+            self.mediumResource = .init( device:device )
             
             // ストレージの生成
             self.planeStorage = planeStorage
@@ -202,7 +201,7 @@ extension Lily.Stage.Playground
         
         public init( 
             device:MTLDevice, 
-            environment:Lily.Stage.ShaderEnvironment = .metallib,
+            environment:Lily.Metal.ShaderEnvironment = .metallib,
             scene:PGScene
         )
         {
@@ -210,7 +209,7 @@ extension Lily.Stage.Playground
             self.environment = environment
 
             self.modelRenderTextures = .init( device:device )            
-            self.mediumTexture = .init( device:device )
+            self.mediumResource = .init( device:device )
             
             // ストレージの生成
             self.planeStorage = scene.planeStorage
@@ -239,7 +238,11 @@ extension Lily.Stage.Playground
             // View自体の背景をclearに
             self.backgroundColor = .clear
             
-            self.makeRenderFlows( device:self.device, environment:self.environment, viewCount:1 )
+            self.makeRenderFlows( 
+                device:self.device, 
+                environment:self.environment, 
+                viewCount:1 
+            )
             
             self.renderEngine.setRenderFlows([
                 clearRenderFlow,
@@ -262,7 +265,7 @@ extension Lily.Stage.Playground
         
         open override func loop() {
             super.loop()
-            metalView.drawMetal()   // Metal描画
+            metalView.execute()   // Metal描画
         }
         
         open override func teardown() {
@@ -272,7 +275,7 @@ extension Lily.Stage.Playground
         
         func makeRenderFlows( 
             device:MTLDevice,
-            environment:Lily.Stage.ShaderEnvironment,
+            environment:Lily.Metal.ShaderEnvironment,
             viewCount:Int
         )
         {
@@ -285,7 +288,7 @@ extension Lily.Stage.Playground
                 environment:environment,
                 viewCount:viewCount,
                 modelRenderTextures:self.modelRenderTextures,
-                mediumTexture:self.mediumTexture
+                mediumResource:self.mediumResource
             )
             
             self.modelRenderFlow = .init(
@@ -293,7 +296,7 @@ extension Lily.Stage.Playground
                 environment:environment,
                 viewCount:viewCount,
                 renderTextures:self.modelRenderTextures,
-                mediumTexture:self.mediumTexture,
+                mediumResource:self.mediumResource,
                 storage:self.modelStorage
             )
                                     
@@ -301,7 +304,7 @@ extension Lily.Stage.Playground
                 device:device,
                 environment:environment,
                 viewCount:viewCount,
-                mediumTexture:mediumTexture,
+                mediumResource:mediumResource,
                 storage:self.bbStorage
             )
             
@@ -309,7 +312,7 @@ extension Lily.Stage.Playground
                 device:device,
                 environment:environment,
                 viewCount:viewCount,
-                mediumTexture:self.mediumTexture,
+                mediumResource:self.mediumResource,
                 storage:self.planeStorage
             )
             
@@ -317,7 +320,7 @@ extension Lily.Stage.Playground
                 device:device, 
                 environment:environment,
                 viewCount:viewCount,
-                mediumTexture:self.mediumTexture
+                mediumResource:self.mediumResource
             )
         }
     }
@@ -326,7 +329,7 @@ extension Lily.Stage.Playground
 #if os(iOS) || os(tvOS) || os(visionOS)
 extension Lily.Stage.Playground.PGScreen
 {
-    public func recogizeTouches( touches allTouches:[UITouch] ) {
+    public func recognizeTouches( touches allTouches:[UITouch] ) {
         // タッチ情報の配列をリセット
         self.touchManager.clear()
         
@@ -372,7 +375,7 @@ extension Lily.Stage.Playground.PGScreen
 #if os(macOS)
 extension Lily.Stage.Playground.PGScreen
 {
-    public func recogizeMouse( pos:LLPoint, phase:Lily.Stage.Playground.MacOSMousePhase, event:NSEvent? ) {
+    public func recognizeMouse( pos:LLPoint, phase:Lily.Stage.Playground.MacOSMousePhase, event:NSEvent? ) {
         // タッチ情報の配列をリセット
         self.touchManager.clear()
         

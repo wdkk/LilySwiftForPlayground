@@ -18,7 +18,7 @@ import UIKit
 
 open class LLImageProc
 {
-    static public func scaleNearest( imgSrc:LLImage, width:Int, height:Int ) 
+    public static func scaleNearest( imgSrc:LLImage, width:Int, height:Int ) 
     -> LLImage
     {
         let img_dst = imgSrc.clone()
@@ -26,7 +26,7 @@ open class LLImageProc
         return img_dst
     }
     
-    static public func scaleBiLinear( imgSrc:LLImage, width:Int, height:Int ) 
+    public static func scaleBiLinear( imgSrc:LLImage, width:Int, height:Int ) 
     -> LLImage
     {
         let img_dst = imgSrc.clone()
@@ -34,7 +34,23 @@ open class LLImageProc
         return img_dst
     }
     
-    static public func scaleSmooth( imgSrc:LLImage, width:Int, height:Int ) 
+    public static func scaleBiCubic( imgSrc:LLImage, width:Int, height:Int ) 
+    -> LLImage
+    {
+        let img_dst = imgSrc.clone()
+        LCImageProcScaleBiCubic( imgSrc.lcImage, img_dst.lcImage, width, height )
+        return img_dst
+    }
+    
+    public static func scaleAreaAverage( imgSrc:LLImage, width:Int, height:Int ) 
+    -> LLImage
+    {
+        let img_dst = imgSrc.clone()
+        LCImageProcScaleAreaAverage( imgSrc.lcImage, img_dst.lcImage, width, height )
+        return img_dst
+    }
+    
+    public static func scaleSmooth( imgSrc:LLImage, width:Int, height:Int ) 
     -> LLImage
     {
         let img_dst = imgSrc.clone()
@@ -42,7 +58,7 @@ open class LLImageProc
         return img_dst
     }
     
-    static public func rotateNearest( imgSrc:LLImage, degree:LLFloat, resizing:Bool ) 
+    public static func rotateNearest( imgSrc:LLImage, degree:LLFloat, resizing:Bool ) 
     -> LLImage
     {
         let img_dst = imgSrc.clone()
@@ -50,7 +66,7 @@ open class LLImageProc
         return img_dst
     }
     
-    static public func rotateBiLinear( imgSrc:LLImage, degree:LLFloat, resizing:Bool )
+    public static func rotateBiLinear( imgSrc:LLImage, degree:LLFloat, resizing:Bool )
     -> LLImage
     {
         let img_dst = imgSrc.clone()
@@ -58,23 +74,63 @@ open class LLImageProc
         return img_dst
     }
     
-    static public func affineTransformNearest( imgSrc:LLImage, width:Int, height:Int, degree:Float, isResize:Bool = false ) 
+    public static func rotateBiCubic( imgSrc:LLImage, degree:LLFloat, resizing:Bool )
     -> LLImage
     {
         let img_dst = imgSrc.clone()
-        LCImageProcAffineTransformNearest( imgSrc.lcImage, img_dst.lcImage, width, height, degree, isResize )
+        LCImageProcRotateBiCubic( imgSrc.lcImage, img_dst.lcImage, degree, resizing )
         return img_dst
     }
-    
-    static public func affineTransformBiLinear( imgSrc:LLImage, width:Int, height:Int, degree:Float, isResize:Bool = false ) 
+
+    public static func affineTransformNearest( imgSrc:LLImage, transform:LL2DAffine, resizing:Bool = false ) 
     -> LLImage
     {
         let img_dst = imgSrc.clone()
-        LCImageProcAffineTransformBiLinear( imgSrc.lcImage, img_dst.lcImage, width, height, degree, isResize )
+        LCImageProcAffineTransformNearest( imgSrc.lcImage, img_dst.lcImage, transform, resizing )
         return img_dst
     }
     
-    static public func bilateral( imgSrc:LLImage, kernel:Int, dist:Double, lumi:Double )
+    public static func affineTransformNearest( imgSrc:LLImage, width:Int, height:Int, degree:Float, resizing:Bool = false ) 
+    -> LLImage
+    {
+        let img_dst = imgSrc.clone()
+        LCImageProcAffineTransformNearest( imgSrc.lcImage, img_dst.lcImage, width, height, degree, resizing )
+        return img_dst
+    }
+    
+    public static func affineTransformBiLinear( imgSrc:LLImage, transform:LL2DAffine, resizing:Bool = false ) 
+    -> LLImage
+    {
+        let img_dst = imgSrc.clone()
+        LCImageProcAffineTransformBiLinear( imgSrc.lcImage, img_dst.lcImage, transform, resizing )
+        return img_dst
+    }
+    
+    public static func affineTransformBiLinear( imgSrc:LLImage, width:Int, height:Int, degree:Float, resizing:Bool = false ) 
+    -> LLImage
+    {
+        let img_dst = imgSrc.clone()
+        LCImageProcAffineTransformBiLinear( imgSrc.lcImage, img_dst.lcImage, width, height, degree, resizing )
+        return img_dst
+    }
+    
+    public static func affineTransformBiCubic( imgSrc:LLImage, transform:LL2DAffine, resizing:Bool = false ) 
+    -> LLImage
+    {
+        let img_dst = imgSrc.clone()
+        LCImageProcAffineTransformBiCubic( imgSrc.lcImage, img_dst.lcImage, transform, resizing )
+        return img_dst
+    }
+    
+    public static func affineTransformBiCubic( imgSrc:LLImage, width:Int, height:Int, degree:Float, resizing:Bool = false ) 
+    -> LLImage
+    {
+        let img_dst = imgSrc.clone()
+        LCImageProcAffineTransformBiCubic( imgSrc.lcImage, img_dst.lcImage, width, height, degree, resizing )
+        return img_dst
+    }
+    
+    public static func bilateral( imgSrc:LLImage, kernel:Int, dist:Double, lumi:Double )
     -> LLImage
     {
         let img_dst = imgSrc.clone()
@@ -82,7 +138,7 @@ open class LLImageProc
         return img_dst
     }
     
-    static public func whiteBalanceAutomatically( imgSrc:LLImage )
+    public static func whiteBalanceAutomatically( imgSrc:LLImage )
     -> LLImage
     {
         let img_dst = imgSrc.clone()

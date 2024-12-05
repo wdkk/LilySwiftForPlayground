@@ -20,7 +20,7 @@ extension Lily.View
         public private(set) var already:Bool = false
         private var _display_link:CADisplayLink?
         private var lastFrameTimestamp: CFTimeInterval = 0
-        lazy var frameRate: Double = 60.0
+        public lazy var frameRate: Double = 60.0
         lazy var frameInterval: Double = 1.0 / frameRate
         
         /// コンストラクタ
@@ -32,7 +32,7 @@ extension Lily.View
         /// デストラクタ
         deinit {
             already = false
-            self.view = nil
+            //self.view = nil
         }
         
         open override func viewDidLoad() {

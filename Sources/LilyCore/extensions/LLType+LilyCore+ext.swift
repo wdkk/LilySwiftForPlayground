@@ -33,12 +33,21 @@ public extension FixedWidthInteger
 
 public protocol LLFloatConvertable
 {
+    init( _ f:Float )
+    init( _ d:Double )
     var f:Float { get }
+    var d:Double { get }
+    
+    static var colorRangeMinValue:Self { get }
+    static var colorRangeMaxValue:Self { get }
 }
 
 /// Int拡張
 extension Int : LLFloatConvertable
 {
+    public static var colorRangeMinValue:Int { return .min }
+    public static var colorRangeMaxValue:Int { return .max }
+    
     /// Int8への変換
     public var i8:Int8? {return Int8.optionalCast( self ) }
     /// Int16への変換
@@ -71,6 +80,9 @@ extension Int : LLFloatConvertable
 /// Int8拡張
 extension Int8 : LLFloatConvertable
 {
+    public static var colorRangeMinValue:Int8 { return .min }
+    public static var colorRangeMaxValue:Int8 { return .max }
+    
     /// Intへの変換
     public var i:Int { return Int( self ) }
     /// Int16への変換
@@ -103,6 +115,9 @@ extension Int8 : LLFloatConvertable
 /// Int16拡張
 extension Int16 : LLFloatConvertable
 {
+    public static var colorRangeMinValue:Int16 { return .min }
+    public static var colorRangeMaxValue:Int16 { return .max }
+    
     /// Intへの変換
     public var i:Int { return Int( self ) }
     /// Int8への変換
@@ -135,6 +150,9 @@ extension Int16 : LLFloatConvertable
 /// Int32拡張
 extension Int32 : LLFloatConvertable
 {
+    public static var colorRangeMinValue:Int32 { return .min }
+    public static var colorRangeMaxValue:Int32 { return .max }
+    
     /// Intへの変換
     public var i:Int { return Int( self ) }
     /// Int8への変換
@@ -167,6 +185,9 @@ extension Int32 : LLFloatConvertable
 /// Int64拡張
 extension Int64 : LLFloatConvertable
 {
+    public static var colorRangeMinValue:Int64 { return .min }
+    public static var colorRangeMaxValue:Int64 { return .max }
+    
     /// Intへの変換
     public var i:Int? { return Int.optionalCast( self ) } 
     /// Int8への変換
@@ -199,6 +220,9 @@ extension Int64 : LLFloatConvertable
 /// UInt拡張
 extension UInt : LLFloatConvertable
 {
+    public static var colorRangeMinValue:UInt { return .min }
+    public static var colorRangeMaxValue:UInt { return .max }
+    
     /// Intへの変換
     public var i:Int? { return Int.optionalCast( self ) } 
     /// Int8への変換
@@ -230,6 +254,9 @@ extension UInt : LLFloatConvertable
 /// UInt8拡張
 extension UInt8 : LLFloatConvertable
 {
+    public static var colorRangeMinValue:UInt8 { return .min }
+    public static var colorRangeMaxValue:UInt8 { return .max }
+    
     /// Intへの変換
     public var i:Int { return Int( self ) } 
     /// Int8への変換
@@ -259,6 +286,9 @@ extension UInt8 : LLFloatConvertable
 /// UInt16拡張
 extension UInt16 : LLFloatConvertable
 {
+    public static var colorRangeMinValue:UInt16 { return .min }
+    public static var colorRangeMaxValue:UInt16 { return .max }
+    
     /// Intへの変換
     public var i:Int { return Int( self ) } 
     /// Int8への変換
@@ -288,6 +318,9 @@ extension UInt16 : LLFloatConvertable
 /// UInt32拡張
 extension UInt32 : LLFloatConvertable 
 {
+    public static var colorRangeMinValue:UInt32 { return .min }
+    public static var colorRangeMaxValue:UInt32 { return .max }
+    
     /// Intへの変換
     public var i:Int? { return Int.optionalCast( self ) } 
     /// Int8への変換
@@ -317,6 +350,9 @@ extension UInt32 : LLFloatConvertable
 /// UInt64拡張
 extension UInt64 : LLFloatConvertable
 { 
+    public static var colorRangeMinValue:UInt64 { return .min }
+    public static var colorRangeMaxValue:UInt64 { return .max }
+    
     /// Intへの変換
     public var i:Int? { return Int.optionalCast( self ) } 
     /// Int8への変換
@@ -344,8 +380,11 @@ extension UInt64 : LLFloatConvertable
 }
 
 /// Float拡張
-extension Float
+extension Float : LLFloatConvertable
 {    
+    public static var colorRangeMinValue:Float { return 0.0 }
+    public static var colorRangeMaxValue:Float { return 1.0 }
+    
     /// Intへの変換
     public var i:Int? { return Int.optionalCast( self ) } 
     /// Int8への変換
@@ -366,6 +405,8 @@ extension Float
     public var u32:UInt32? { return UInt32.optionalCast( self ) }
     /// UInt64への変換
     public var u64:UInt64? { return UInt64.optionalCast( self ) }
+    /// Floatへの変換
+    public var f:Float { return self }
     /// Doubleへの変換
     public var d:Double { return Double( self ) }
     /// CGFloatへの変換
@@ -381,6 +422,9 @@ extension Float
 /// Double拡張
 extension Double : LLFloatConvertable
 {
+    public static var colorRangeMinValue:Double { return 0.0 }
+    public static var colorRangeMaxValue:Double { return 1.0 }
+    
     /// Intへの変換
     public var i:Int? { return Int.optionalCast( self ) } 
     /// Int8への変換
@@ -403,6 +447,8 @@ extension Double : LLFloatConvertable
     public var u64:UInt64? { return UInt64.optionalCast( self ) }
     /// Floatへの変換
     public var f:Float { return Float( self ) }
+    /// Doubleへの変換
+    public var d:Double { return self }
     /// CGFloatへの変換
     public var cgf:CGFloat { return CGFloat( self ) }
     
@@ -416,6 +462,9 @@ extension Double : LLFloatConvertable
 /// CGFloat拡張
 extension CGFloat : LLFloatConvertable 
 {
+    public static var colorRangeMinValue:CGFloat { return 0.0 }
+    public static var colorRangeMaxValue:CGFloat { return 1.0 }
+    
     /// Intへの変換
     public var i:Int? { return Int.optionalCast( self ) } 
     /// Int8への変換

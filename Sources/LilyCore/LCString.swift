@@ -63,7 +63,7 @@ public func LCStringMakeWithCChars( _ text:LLConstCCharsPtr ) -> LCStringSmPtr {
 /// - Returns: 1文字のLilyCore文字列
 public func LCStringMakeWithChar( _ chr:LLInt8 ) -> LCStringSmPtr {
     let cstr = LCStringSmPtr()
-    cstr.s = String( cString: [chr] )
+    cstr.s = "\(chr)"
     return cstr
 }
 
@@ -484,7 +484,8 @@ public func LCStringUppercased( _ src_:LCStringSmPtr ) -> LCStringSmPtr {
 ///   - src_: 対象の文字列
 ///   - attr_: フォント属性
 /// - Returns: ピクセルサイズ
-public func LCStringPixelSize( _ src_:LCStringSmPtr, _ attr_:LCTextAttributeSmPtr ) -> LLSize {
+nonisolated(unsafe)
+public func LCStringPixelSize( _ src_:LCStringSmPtr, _ attr_:LCTextAttributeSmPtr ) async -> LLSize {
     let family = String( LCTextAttributeFace( attr_ ) )
     let str = String( src_ )
 
@@ -503,7 +504,7 @@ public func LCStringPixelSize( _ src_:LCStringSmPtr, _ attr_:LCTextAttributeSmPt
                                  attributes: attributes, 
                                  context: nil )
     
-    let scale = LCSystemGetRetinaScale()
+    let scale = await LCSystemGetRetinaScale()
     
     return LLSize( ceil( sz.width ) * scale.cgf, ceil( sz.height ) * scale.cgf )
 }

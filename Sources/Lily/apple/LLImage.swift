@@ -32,6 +32,7 @@ open class LLImage
         _imgc = LCImageMake( wid, hgt, type )
     }
     
+    @MainActor
     public init( _ path:LLString ) { 
         _imgc = LCImageMakeWithFile( path.lcStr )
     }
@@ -82,6 +83,8 @@ open class LLImage
             mipmapLevel: 0
         )
     }
+    
+
     #endif
     
     open var available:Bool { return LCImageGetType( _imgc ) != .none }

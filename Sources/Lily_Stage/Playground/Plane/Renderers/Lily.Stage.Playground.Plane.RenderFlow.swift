@@ -18,7 +18,7 @@ extension Lily.Stage.Playground.Plane
     : Lily.Stage.Playground.BaseRenderFlow
     {
         var pass:Pass?
-        weak var mediumTexture:Lily.Stage.Playground.MediumTexture?
+        weak var mediumResource:Lily.Stage.Playground.MediumResource?
         public weak var storage:PlaneStorage?
         
         var comDelta:PlaneComDelta?
@@ -33,16 +33,16 @@ extension Lily.Stage.Playground.Plane
         
         public init(
             device:MTLDevice,
-            environment:Lily.Stage.ShaderEnvironment,
+            environment:Lily.Metal.ShaderEnvironment,
             viewCount:Int,
-            mediumTexture:Lily.Stage.Playground.MediumTexture,
+            mediumResource:Lily.Stage.Playground.MediumResource,
             storage:PlaneStorage?
         ) 
         {
             self.pass = .init( device:device )
             self.viewCount = viewCount
             
-            self.mediumTexture = mediumTexture
+            self.mediumResource = mediumResource
             self.storage = storage
             
             PGShader.shared.ready( device:device )
@@ -76,6 +76,8 @@ extension Lily.Stage.Playground.Plane
             super.init( device:device )
         }
         
+        
+        @MainActor
         public override func changeSize( scaledSize:CGSize ) {
             screenSize = scaledSize
             screenSize.width /= LLSystem.retinaScale
@@ -131,9 +133,9 @@ extension Lily.Stage.Playground.Plane
             
             // 共通処理
             pass.updatePass( 
-                mediumTexture:mediumTexture!,
+                mediumResource:mediumResource!,
                 rasterizationRateMap:rasterizationRateMap,
-                renderTargetCount:viewCount        
+                renderTargetViewIndex:viewCount        
             )
             
             // フォワードレンダリング : パーティクルの描画の設定
@@ -147,13 +149,13 @@ extension Lily.Stage.Playground.Plane
             .cullMode( .front )
             .depthStencilState( pass.depthState! )
             .viewports( viewports )
-            .vertexAmplification( count:viewCount, viewports:viewports )
+            .vertexAmplification( viewports:viewports )
             
             // Playgroundレンダー描画
             alphaRenderer?.draw(
                 with:encoder,
                 globalUniforms:uniforms,
-                mediumTexture:mediumTexture!,
+                mediumResource:mediumResource!,
                 storage:storage,
                 screenSize:screenSize
             )
@@ -161,7 +163,7 @@ extension Lily.Stage.Playground.Plane
             alphaRenderer?.drawTriangle(
                 with:encoder,
                 globalUniforms:uniforms,
-                mediumTexture:mediumTexture!,
+                mediumResource:mediumResource!,
                 storage:storage,
                 screenSize:screenSize
             )
@@ -169,7 +171,7 @@ extension Lily.Stage.Playground.Plane
             addRenderer?.draw(
                 with:encoder,
                 globalUniforms:uniforms,
-                mediumTexture:mediumTexture!,
+                mediumResource:mediumResource!,
                 storage:storage,
                 screenSize:screenSize
             )
@@ -177,7 +179,7 @@ extension Lily.Stage.Playground.Plane
             addRenderer?.drawTriangle(
                 with:encoder,
                 globalUniforms:uniforms,
-                mediumTexture:mediumTexture!,
+                mediumResource:mediumResource!,
                 storage:storage,
                 screenSize:screenSize
             )
@@ -185,7 +187,7 @@ extension Lily.Stage.Playground.Plane
             subRenderer?.draw(
                 with:encoder,
                 globalUniforms:uniforms,
-                mediumTexture:mediumTexture!,
+                mediumResource:mediumResource!,
                 storage:storage,
                 screenSize:screenSize
             )
@@ -193,7 +195,7 @@ extension Lily.Stage.Playground.Plane
             subRenderer?.drawTriangle(
                 with:encoder,
                 globalUniforms:uniforms,
-                mediumTexture:mediumTexture!,
+                mediumResource:mediumResource!,
                 storage:storage,
                 screenSize:screenSize
             )

@@ -22,7 +22,7 @@ extension Lily.View
         private var _dlink = DisplayLink()
         
         private var lastFrameTimestamp: CFTimeInterval = 0
-        lazy var frameRate: Double = 60.0
+        public lazy var frameRate: Double = 60.0
         lazy var frameInterval: Double = 1.0 / frameRate
         
         public init() {
@@ -42,14 +42,17 @@ extension Lily.View
         var _mutex = Lily.View.RecursiveMutex()
         
         override open func loadView() {
+            super.loadView()
             self.view = VCView( vc:self )
         }
         
         override open func viewDidLoad() {
+            super.viewDidLoad()
             callSetupPhase()
         }
         
         override open func viewWillLayout() {
+            super.viewWillLayout()
             if isViewLoaded {
                 already = true
                 rebuild()
@@ -57,6 +60,7 @@ extension Lily.View
         }
         
         override open func viewDidAppear() {
+            super.viewDidAppear()
             rebuild()
         }
         
@@ -129,7 +133,10 @@ extension Lily.View
                     Thread.sleep( forTimeInterval: 1.0 / 10_000.0 )
                 }
                 
-                loop() 
+                // 非同期の中でloopはMainActor管理で処理する必要がある
+                Task { @MainActor in
+                    self.loop() 
+                }
             }
         }
         
